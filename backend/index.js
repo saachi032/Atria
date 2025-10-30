@@ -5,6 +5,7 @@ import dotenv from 'dotenv';
 import authRoutes from './routes/auth.js';
 import hospitalAuthRoutes from './routes/hospitalAuth.js';
 import bloodBankAuthRoutes from './routes/bloodBankAuth.js';
+import appointmentsRoutes from './routes/appointments.js';
 
 // Load .env
 dotenv.config();
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/hospital', hospitalAuthRoutes);
 app.use('/api/bloodbank', bloodBankAuthRoutes);
+app.use('/api/appointments', appointmentsRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {

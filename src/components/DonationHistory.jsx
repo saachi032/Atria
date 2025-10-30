@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 // --- Modal Component ---
@@ -64,16 +64,55 @@ export default function DonationHistory() {
   ];
   
   // New data for upcoming appointments
-  const upcomingAppointments = [
-    { id: 1, date: 'Nov 20, 2025', time: '11:00 AM', locationName: 'Central Blood Bank', locationCity: 'Mumbai, MH', donationType: 'Whole Blood', status: 'Scheduled'},
-    { id: 2, date: 'Feb 15, 2026', time: '02:30 PM', locationName: 'Mobile Donation Camp', locationCity: 'Vashi, Navi Mumbai', donationType: 'Platelets', status: 'Scheduled'}
-  ];
+  const [upcomingAppointments, setUpcomingAppointments] = useState([]);
+  const [loadingAppointments, setLoadingAppointments] = useState(true);
+  const [appointmentsError, setAppointmentsError] = useState('');
 
   // State for pagination, search, and modal
   const [currentPage, setCurrentPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDonation, setSelectedDonation] = useState(null);
   const itemsPerPage = 4;
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setAppointmentsError('Please log in to view your appointments.');
+      setLoadingAppointments(false);
+      return;
+    }
+    const load = async () => {
+      try {
+        const res = await fetch('/api/appointments/upcoming', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          if (res.status === 401) {
+            setAppointmentsError('Your session has expired. Please log in again.');
+          } else {
+            const text = await res.text();
+            setAppointmentsError(text || 'Failed to load appointments');
+          }
+          setUpcomingAppointments([]);
+          return;
+        }
+        const data = await res.json().catch(() => null);
+        if (!data || data.success !== true) {
+          setAppointmentsError((data && data.msg) || 'Failed to load appointments');
+          setUpcomingAppointments([]);
+        } else {
+          setUpcomingAppointments(data.appointments || []);
+          setAppointmentsError('');
+        }
+      } catch (e) {
+        setAppointmentsError('Network error while loading appointments');
+        setUpcomingAppointments([]);
+      } finally {
+        setLoadingAppointments(false);
+      }
+    };
+    load();
+  }, []);
 
   // Search and Filtering Logic
   const filteredHistory = history.filter(donation => {
@@ -108,8 +147,7 @@ export default function DonationHistory() {
   const CalendarIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-500" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" /></svg>)
   const PlusIcon = () => (<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" /></svg>);
 
-  const handleCancelAppointment = (id) => {
-    // In a real application, this would trigger an API call to cancel the appointment.
+  const handleCancelAppointment = async (id) => {
     alert(`Appointment ID: ${id} cancellation request sent.`);
   };
 
@@ -205,6 +243,7 @@ export default function DonationHistory() {
               <div className="bg-white shadow-md rounded-lg">
                 <div className="px-4 sm:px-6 lg:px-8 py-6 md:py-8">
                   <h2 className="text-2xl font-bold text-gray-800 mb-6">Scheduled Appointments</h2>
+                  {appointmentsError && <div className="mb-4 bg-red-100 text-red-700 border border-red-300 px-4 py-2 rounded">{appointmentsError}</div>}
                   <div className="overflow-x-auto">
                       <table className="min-w-full">
                         <thead className="border-b border-gray-200">
@@ -217,9 +256,9 @@ export default function DonationHistory() {
                           </tr>
                         </thead>
                         <tbody>
-                          {upcomingAppointments.length > 0 ? (
+                          {!loadingAppointments && upcomingAppointments.length > 0 ? (
                             upcomingAppointments.map((appt) => (
-                              <tr key={appt.id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                              <tr key={appt._id} className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                                 <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                     <div>{appt.date}</div>
                                     <div className="text-xs text-gray-500">{appt.time}</div>
@@ -233,12 +272,12 @@ export default function DonationHistory() {
                                     <span className="inline-flex items-center px-3 py-1 text-sm leading-5 font-semibold rounded-full bg-blue-100 text-blue-800"><CalendarIcon />{appt.status}</span>
                                 </td>
                                 <td className="px-4 py-4 whitespace-nowrap text-sm font-semibold">
-                                    <button onClick={() => handleCancelAppointment(appt.id)} className="text-gray-500 hover:text-red-600 transition-colors">Cancel</button>
+                                    <button onClick={() => handleCancelAppointment(appt._id)} className="text-gray-500 hover:text-red-600 transition-colors">Cancel</button>
                                 </td>
                               </tr>
                             ))
                           ) : (
-                            <tr><td colSpan="5" className="px-6 py-10 text-center text-gray-500">You have no upcoming appointments.</td></tr>
+                            <tr><td colSpan="5" className="px-6 py-10 text-center text-gray-500">{loadingAppointments ? 'Loading...' : 'You have no upcoming appointments.'}</td></tr>
                           )}
                         </tbody>
                       </table>

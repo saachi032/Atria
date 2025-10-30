@@ -7,10 +7,24 @@ dotenv.config();
 
 const router = express.Router();
 
+// Simple auth middleware
+const requireAuth = (req, res, next) => {
+  const auth = req.headers.authorization || '';
+  const token = auth.startsWith('Bearer ') ? auth.slice(7) : null;
+  if (!token) return res.status(401).json({ success: false, msg: 'Unauthorized' });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.userId = decoded.userId;
+    return next();
+  } catch (e) {
+    return res.status(401).json({ success: false, msg: 'Invalid token' });
+  }
+};
+
 // Register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, phone, address, state, city, district, pincode, gender, bloodGroup, dob } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ success: false, msg: 'Name, email, and password are required' });
@@ -24,7 +38,7 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const user = new User({ name, email, password: hashedPassword });
+    const user = new User({ name, email, password: hashedPassword, phone, address, state, city, district, pincode, gender, bloodGroup, dob });
     await user.save();
 
     return res.status(201).json({
@@ -64,6 +78,51 @@ router.post('/login', async (req, res) => {
       user: { id: user._id, name: user.name, email: user.email },
     });
   } catch (err) {
+    return res.status(500).json({ success: false, msg: 'Server error' });
+  }
+});
+
+// Get current user profile
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password');
+    if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
+    return res.json({ success: true, user });
+  } catch (e) {
+    return res.status(500).json({ success: false, msg: 'Server error' });
+  }
+});
+
+// Update current user profile
+router.put('/me', requireAuth, async (req, res) => {
+  try {
+    const allowed = ['name','phone','address','state','city','district','pincode','gender','bloodGroup','dob'];
+    const updates = {};
+    for (const key of allowed) {
+      if (req.body[key] !== undefined) updates[key] = req.body[key];
+    }
+    const user = await User.findByIdAndUpdate(req.userId, updates, { new: true }).select('-password');
+    return res.json({ success: true, user });
+  } catch (e) {
+    return res.status(500).json({ success: false, msg: 'Server error' });
+  }
+});
+
+// Generate Donor QR (returns a QR URL and payload)
+router.get('/qr', requireAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('-password');
+    if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
+    const payload = {
+      donorId: String(user._id),
+      name: user.name || '',
+      bloodGroup: user.bloodGroup || '',
+      city: user.city || '',
+      state: user.state || '',
+    };
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(JSON.stringify(payload))}`;
+    return res.json({ success: true, qrUrl, payload });
+  } catch (e) {
     return res.status(500).json({ success: false, msg: 'Server error' });
   }
 });

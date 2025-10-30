@@ -90,47 +90,23 @@ export default function RegisterForm() {
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    if (!isPhoneVerified) {
-      setError("Please verify your phone number before signing up.");
-      return;
-    }
-    if (form.password !== form.confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    // --- NEW: Password Strength Validation ---
+    if (!isPhoneVerified) { setError("Please verify your phone number before signing up."); return; }
+    if (form.password !== form.confirmPassword) { setError("Passwords do not match."); return; }
     const hasNumber = /\d/;
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/;
-
-    if (form.password.length < 8) {
-        setError("Password must be at least 8 characters long.");
-        return;
-    }
-    if (!hasNumber.test(form.password)) {
-        setError("Password must contain at least one number.");
-        return;
-    }
-    if (!hasSpecialChar.test(form.password)) {
-        setError("Password must contain at least one special character.");
-        return;
-    }
-    
-    // Previous validation logic
+    if (form.password.length < 8) { setError("Password must be at least 8 characters long."); return; }
+    if (!hasNumber.test(form.password)) { setError("Password must contain at least one number."); return; }
+    if (!hasSpecialChar.test(form.password)) { setError("Password must contain at least one special character."); return; }
     if (!form.agreed) { setError("Please agree to the terms."); return; }
     const finalData = { ...form, age: calculatedAge, pincode: pincode };
-    const formToValidate = { ...finalData };
-    delete formToValidate.agreed; delete formToValidate.confirmPassword;
-    for (const key in formToValidate) {
-        if (!formToValidate[key]) {
-            setError(`Incomplete fields. Please fill out the entire form. Missing: ${key}`);
-            return;
-        }
-    }
-    
+    const formToValidate = { ...finalData }; delete formToValidate.agreed; delete formToValidate.confirmPassword;
+    for (const key in formToValidate) { if (!formToValidate[key]) { setError(`Incomplete fields. Please fill out the entire form. Missing: ${key}`); return; }}
+
+    const pad = (n) => String(n).padStart(2,'0');
+    const dob = `${form.dob_year}-${pad(form.dob_month)}-${pad(form.dob_day)}`;
+
     setLoading(true);
     try {
-      // Call backend registration route (requires name, email, password)
       const res = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -138,6 +114,15 @@ export default function RegisterForm() {
           name: `${form.firstName} ${form.lastName}`.trim(),
           email: form.email,
           password: form.password,
+          phone: form.phone,
+          address: form.address,
+          state: form.state,
+          city: form.city,
+          district: form.district,
+          pincode: pincode,
+          gender: form.gender,
+          bloodGroup: form.bloodGroup,
+          dob,
         })
       });
       const data = await res.json();
