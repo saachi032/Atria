@@ -4,7 +4,8 @@ import { useState, useMemo } from "react"
 import Sidebar from "./Sidebar"
 import toast, { Toaster } from "react-hot-toast"
 import Papa from "papaparse"
-import AddStockModal from "./modals/AddStockModal"
+
+import AddStockModal from "../modals/AddStockModal"
 
 // --- MOCK DATA ---
 const initialInventoryData = [

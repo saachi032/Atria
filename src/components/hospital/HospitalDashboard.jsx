@@ -16,9 +16,9 @@ import {
   Pie,
   Cell,
 } from "recharts"
-import CreateRequestModal from "./modals/CreateRequestModal"
-import RecordDonationModal from "./modals/RecordDonationModal"
-import SendDonorAlertModal from "./modals/SendDonorAlertModal"
+import CreateRequestModal from "../modals/CreateRequestModal"
+import RecordDonationModal from "../modals/RecordDonationModal"
+import SendDonorAlertModal from "../modals/SendDonorAlertModal"
 
 // --- Animation Hook ---
 const useAnimatedCounter = (endValue, duration = 400) => {
