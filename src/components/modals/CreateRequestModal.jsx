@@ -22,20 +22,38 @@ export default function CreateRequestModal({ isOpen, onClose }) {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log("New Request Created:", formData)
-    alert(`Request created for ${formData.patientName} - ${formData.units} units of ${formData.bloodType}`)
-    setFormData({
-      patientName: "",
-      patientId: "",
-      bloodType: "O+",
-      units: 1,
-      urgency: "Medium",
-      reason: "",
-      doctorName: "",
-    })
-    onClose()
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.success !== true) {
+        const msg = (data && data.msg) || 'Failed to create request'
+        alert(msg)
+        return
+      }
+      alert(`Request created for ${formData.patientName} - ${formData.units} units of ${formData.bloodType}`)
+      setFormData({
+        patientName: "",
+        patientId: "",
+        bloodType: "O+",
+        units: 1,
+        urgency: "Medium",
+        reason: "",
+        doctorName: "",
+      })
+      onClose()
+    } catch (err) {
+      alert('Network error while creating request')
+    }
   }
 
   if (!isOpen) return null

@@ -19,18 +19,36 @@ export default function SendDonorAlertModal({ isOpen, onClose }) {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log("Donor Alert Sent:", formData)
-    alert(`Alert sent to ${formData.recipientGroup} for ${formData.unitsNeeded} units of ${formData.bloodType}`)
-    setFormData({
-      bloodType: "O+",
-      urgency: "High",
-      unitsNeeded: 5,
-      message: "",
-      recipientGroup: "All Donors",
-    })
-    onClose()
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/alerts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.success !== true) {
+        const msg = (data && data.msg) || 'Failed to send donor alert'
+        alert(msg)
+        return
+      }
+      alert(`Alert sent to ${formData.recipientGroup} for ${formData.unitsNeeded} units of ${formData.bloodType}`)
+      setFormData({
+        bloodType: "O+",
+        urgency: "High",
+        unitsNeeded: 5,
+        message: "",
+        recipientGroup: "All Donors",
+      })
+      onClose()
+    } catch (err) {
+      alert('Network error while sending donor alert')
+    }
   }
 
   if (!isOpen) return null

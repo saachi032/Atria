@@ -223,6 +223,7 @@ export default function HospitalDashboard() {
   const [showCreateRequest, setShowCreateRequest] = useState(false)
   const [showRecordDonation, setShowRecordDonation] = useState(false)
   const [showDonorAlert, setShowDonorAlert] = useState(false)
+  const [recentRequests, setRecentRequests] = useState([])
 
   const totalUnits = inventoryData.reduce((sum, item) => sum + item.units, 0)
   const totalPendingRequests = pendingRequests.length
@@ -275,6 +276,25 @@ export default function HospitalDashboard() {
     return colors[color] || "bg-gray-100 text-gray-600"
   }
 
+  // Load recent requests for notifications
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    const load = async () => {
+      try {
+        const res = await fetch('/api/requests', { headers: { Authorization: `Bearer ${token}` } })
+        if (!res.ok) return
+        const data = await res.json().catch(() => null)
+        if (data && data.success && Array.isArray(data.requests)) {
+          setRecentRequests(data.requests.slice(0, 5))
+        }
+      } catch {
+        // ignore
+      }
+    }
+    load()
+  }, [])
+
   return (
     <div className="flex h-screen bg-gray-50 font-sans">
       <Sidebar />
@@ -300,12 +320,12 @@ export default function HospitalDashboard() {
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-10 animate-fade-in-fast">
                 <div className="p-4 font-semibold border-b">Notifications</div>
                 <div className="py-2 max-h-96 overflow-y-auto">
-                  {pendingRequests.map((req) => (
-                    <div key={req.id} className="px-4 py-2 hover:bg-gray-100">
+                  {(recentRequests.length > 0 ? recentRequests : pendingRequests).map((req) => (
+                    <div key={req._id || req.id} className="px-4 py-2 hover:bg-gray-100">
                       <p className="text-sm font-medium text-gray-800">
-                        New Request: {req.units} units of {req.type}
+                        New Request: {req.units} units of {req.bloodType || req.type}
                       </p>
-                      <p className="text-xs text-gray-500">For patient {req.patient}</p>
+                      <p className="text-xs text-gray-500">For patient {req.patientName || req.patient}</p>
                     </div>
                   ))}
                   {lowStockAlerts.map((alert) => (

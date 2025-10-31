@@ -22,21 +22,39 @@ export default function RecordDonationModal({ isOpen, onClose }) {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    console.log("New Donation Recorded:", formData)
-    alert(`Donation recorded from ${formData.donorName} - ${formData.units} units of ${formData.bloodType}`)
-    setFormData({
-      donorName: "",
-      donorId: "",
-      bloodType: "O+",
-      units: 1,
-      donationDate: new Date().toISOString().split("T")[0],
-      donorPhone: "",
-      donorEmail: "",
-      healthStatus: "Healthy",
-    })
-    onClose()
+    try {
+      const token = localStorage.getItem('token') || ''
+      const res = await fetch('/api/donations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(formData),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || data.success !== true) {
+        const msg = (data && data.msg) || 'Failed to record donation'
+        alert(msg)
+        return
+      }
+      alert(`Donation recorded from ${formData.donorName} - ${formData.units} units of ${formData.bloodType}`)
+      setFormData({
+        donorName: "",
+        donorId: "",
+        bloodType: "O+",
+        units: 1,
+        donationDate: new Date().toISOString().split("T")[0],
+        donorPhone: "",
+        donorEmail: "",
+        healthStatus: "Healthy",
+      })
+      onClose()
+    } catch (err) {
+      alert('Network error while recording donation')
+    }
   }
 
   if (!isOpen) return null
