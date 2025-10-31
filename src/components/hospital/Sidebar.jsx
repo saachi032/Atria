@@ -12,7 +12,7 @@ const LogOutIcon = (props) => ( <svg xmlns="http://www.w3.org/2000/svg" width="2
 export default function Sidebar() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { logout } = useAuth();
+    const { logout, user } = useAuth();
 
     async function handleLogout() {
         try {
@@ -33,7 +33,7 @@ export default function Sidebar() {
         <aside className="w-64 bg-white border-r shadow-md flex flex-col flex-shrink-0">
             <div className="p-6 text-center border-b">
                 <Link to="/hospital/dashboard" className="text-2xl font-bold text-red-600 no-underline transition-opacity hover:opacity-80">
-                    ♦ XYZ Hospital
+                    ♦ {user?.hospitalName || user?.name || 'Hospital'}
                 </Link>
             </div>
             <nav className="flex-1 px-4 py-6 space-y-2">

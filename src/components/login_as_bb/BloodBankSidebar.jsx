@@ -1,6 +1,5 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-// If you use AuthContext for bloodbank, import useAuth
 import { useAuth } from '../../context/AuthContext';
 
 // --- SVG Icon Components ---
@@ -33,19 +32,15 @@ const LogOutIcon = (props) => (
 function BloodBankSidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  // Uncomment if you use AuthContext
-  // const { logout } = useAuth();
+  const { logout, user } = useAuth();
 
   async function handleLogout() {
-
     try {
       await logout();
-      navigate('/login/bloodbank');
+      navigate('/');
     } catch (error) {
       console.error("Failed to log out:", error);
     }
-    Otherwise:
-    navigate('/');
   }
 
   const getLinkClass = (path) =>
@@ -57,7 +52,7 @@ function BloodBankSidebar() {
     <aside className="w-64 bg-white border-r shadow-md flex flex-col flex-shrink-0">
       <div className="p-6 text-center border-b">
         <Link to="/bloodbank/dashboard" className="text-2xl font-bold text-red-600 no-underline transition-opacity hover:opacity-80">
-          ♦ XYZ Blood Bank
+          ♦ {user?.name || 'Blood Bank'}
         </Link>
       </div>
       <nav className="flex-1 px-4 py-6 space-y-2">

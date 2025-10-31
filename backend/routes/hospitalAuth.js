@@ -10,9 +10,27 @@ const router = express.Router();
 // Hospital Register
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ success: false, msg: 'Name, email, and password are required' });
+    const {
+      name,
+      hospitalName,
+      licenseNumber,
+      hospitalType,
+      address,
+      contactNumber1,
+      website,
+      state,
+      city,
+      district,
+      pincode,
+      pocName,
+      pocDesignation,
+      pocMobile,
+      pocEmail,
+      email,
+      password,
+    } = req.body;
+    if (!name || !hospitalName || !email || !password) {
+      return res.status(400).json({ success: false, msg: 'Name, hospitalName, email, and password are required' });
     }
     const existing = await HospitalUser.findOne({ email });
     if (existing) {
@@ -20,12 +38,30 @@ router.post('/register', async (req, res) => {
     }
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
-    const hospitalUser = new HospitalUser({ name, email, password: hashedPassword });
+    const hospitalUser = new HospitalUser({
+      name,
+      hospitalName,
+      licenseNumber,
+      hospitalType,
+      address,
+      contactNumber1,
+      website,
+      state,
+      city,
+      district,
+      pincode,
+      pocName,
+      pocDesignation,
+      pocMobile,
+      pocEmail,
+      email,
+      password: hashedPassword,
+    });
     await hospitalUser.save();
     return res.status(201).json({
       success: true,
       msg: 'Hospital registered successfully',
-      user: { id: hospitalUser._id, name: hospitalUser.name, email: hospitalUser.email },
+      user: { id: hospitalUser._id, name: hospitalUser.name, hospitalName: hospitalUser.hospitalName, email: hospitalUser.email },
     });
   } catch (err) {
     return res.status(500).json({ success: false, msg: 'Server error' });
@@ -51,7 +87,7 @@ router.post('/login', async (req, res) => {
     return res.status(200).json({
       success: true,
       token,
-      user: { id: hospitalUser._id, name: hospitalUser.name, email: hospitalUser.email },
+      user: { id: hospitalUser._id, name: hospitalUser.name, hospitalName: hospitalUser.hospitalName, email: hospitalUser.email },
     });
   } catch (err) {
     return res.status(500).json({ success: false, msg: 'Server error' });

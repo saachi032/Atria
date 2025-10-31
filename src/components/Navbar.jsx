@@ -7,7 +7,7 @@ import { useAuth } from "../context/AuthContext"
 const Navbar = () => {
   const location = useLocation()
   const navigate = useNavigate() // Hook for navigation
-  const { isLoggedIn, logout } = useAuth()
+  const { isLoggedIn, logout, user } = useAuth()
   const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
@@ -175,6 +175,11 @@ const Navbar = () => {
       <ul className="hidden md:flex items-center space-x-8 text-black font-semibold">
         {isLoggedIn ? <LoggedInLinks /> : <LoggedOutLinks />}
       </ul>
+      {isLoggedIn && (
+        <div className="hidden md:flex items-center text-sm text-gray-600 font-semibold ml-4">
+          Hello, <span className="ml-1 text-gray-900">{user?.name || 'User'}</span>
+        </div>
+      )}
 
       {/* Mobile Menu Button */}
       <button

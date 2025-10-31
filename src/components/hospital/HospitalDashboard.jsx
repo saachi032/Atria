@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import { useAuth } from "../../context/AuthContext"
 import Sidebar from "./Sidebar"
 import {
   BarChart,
@@ -219,6 +220,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
 export default function HospitalDashboard() {
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [showCreateRequest, setShowCreateRequest] = useState(false)
   const [showRecordDonation, setShowRecordDonation] = useState(false)
@@ -301,7 +303,7 @@ export default function HospitalDashboard() {
       <main className="flex-1 p-8 overflow-y-auto animate-fade-in">
         <header className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-3xl font-bold text-gray-800">Welcome back, Admin!</h2>
+            <h2 className="text-3xl font-bold text-gray-800">Welcome back, {user?.name || 'Admin'}!</h2>
             <p className="text-gray-500 mt-1">Here's a summary of your hospital's blood bank activity.</p>
           </div>
           <div className="relative">

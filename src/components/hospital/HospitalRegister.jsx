@@ -35,10 +35,10 @@ export default function HospitalRegister() {
   const [pincode, setPincode] = useState("");
   const stateNames = Object.keys(statesAndCities).sort();
 
-  // State for OTP verification for the POC mobile number
+  // OTP flow disabled (no mobile OTP integration yet)
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
-  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -67,30 +67,23 @@ export default function HospitalRegister() {
     setForm(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   }
 
-  // --- OTP Handlers for POC Mobile ---
+  // --- OTP Handlers (disabled) ---
   function handleSendOtp() {
-    if (form.pocMobile.length < 10 || !/^\d+$/.test(form.pocMobile)) {
-      alert('Please enter a valid 10-digit POC mobile number.');
-      return;
-    }
-    alert(`An OTP has been sent to ${form.pocMobile}. (Simulation)`);
-    setIsOtpSent(true);
+    // No OTP integration; treat as verified
+    setIsOtpSent(false);
+    setIsPhoneVerified(true);
   }
 
   function handleVerifyOtp() {
-    if (otp === "1234") { // Simulate correct OTP
-      alert("POC mobile number verified successfully!");
-      setIsPhoneVerified(true);
-    } else {
-      alert("Invalid OTP. Please try again.");
-    }
+    // No OTP integration; already verified
+    setIsPhoneVerified(true);
   }
 
   // --- Form Submission ---
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
-    if (!isPhoneVerified) { setError("Please verify the Point of Contact's mobile number."); return; }
+    // OTP verification disabled
     if (form.password !== form.confirmPassword) { setError("Passwords do not match."); return; }
     if (!form.agreed) { setError("Please agree to the terms."); return; }
     // password checks (min 8 chars, number, special)
@@ -107,6 +100,20 @@ export default function HospitalRegister() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.pocName,
+          hospitalName: form.hospitalName,
+          licenseNumber: form.licenseNumber,
+          hospitalType: form.hospitalType,
+          address: form.address,
+          contactNumber1: form.contactNumber1,
+          website: form.website,
+          state: form.state,
+          city: form.city,
+          district: form.district,
+          pincode: pincode,
+          pocName: form.pocName,
+          pocDesignation: form.pocDesignation,
+          pocMobile: form.pocMobile,
+          pocEmail: form.pocEmail,
           email: form.pocEmail,
           password: form.password,
         })
@@ -205,26 +212,13 @@ export default function HospitalRegister() {
                 <div><label htmlFor="pocDesignation" className={labelStyle}>POC Designation</label><input id="pocDesignation" name="pocDesignation" value={form.pocDesignation} onChange={handleChange} className={inputStyle} /></div>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
-                 <div>
+                <div>
                   <label htmlFor="pocMobile" className={labelStyle}>POC Mobile Number</label>
-                  <div className="flex gap-2">
-                    <input id="pocMobile" name="pocMobile" type="tel" value={form.pocMobile} onChange={handleChange} className={inputStyle} disabled={isPhoneVerified} />
-                    <button type="button" onClick={handleSendOtp} disabled={isOtpSent} className="py-2 px-4 rounded-md text-white bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 whitespace-nowrap">
-                      {isPhoneVerified ? 'Verified ✓' : 'Verify'}
-                    </button>
-                  </div>
+                  <input id="pocMobile" name="pocMobile" type="tel" value={form.pocMobile} onChange={handleChange} className={inputStyle} />
                 </div>
                 <div><label htmlFor="pocEmail" className={labelStyle}>POC Email (This will be your username)</label><input id="pocEmail" name="pocEmail" type="email" value={form.pocEmail} onChange={handleChange} className={inputStyle} /></div>
               </div>
-              {isOtpSent && !isPhoneVerified && (
-                <div className="p-4 bg-blue-50 rounded-md grid md:grid-cols-2 gap-6 items-center">
-                  <label htmlFor="otp" className={labelStyle}>Enter OTP sent to {form.pocMobile}</label>
-                  <div className="flex items-center gap-2">
-                    <input id="otp" name="otp" value={otp} onChange={(e) => setOtp(e.target.value)} className={inputStyle} maxLength="4" placeholder="4-digit code" />
-                    <button type="button" onClick={handleVerifyOtp} className="py-2 px-4 rounded-md text-white bg-green-500 hover:bg-green-600">Confirm</button>
-                  </div>
-                </div>
-              )}
+              {/* OTP block removed (no integration) */}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="password" className={labelStyle}>Create Password</label>
@@ -239,7 +233,7 @@ export default function HospitalRegister() {
           {/* Submission */}
           <div>
             <div className="flex items-center mb-6"><input id="agreed" name="agreed" type="checkbox" checked={form.agreed} onChange={handleChange} className="h-4 w-4 text-blue-600 focus:ring-blue-500" /><label htmlFor="agreed" className="ml-2 block text-sm">I confirm that all the information provided is accurate and agree to the terms of service.</label></div>
-            <button type="submit" disabled={!isPhoneVerified || loading} className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400">
+            <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400">
               {loading ? "Registering..." : "Complete Registration"}
             </button>
           </div>
