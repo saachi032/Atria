@@ -18,3 +18,7 @@ const bloodBankUserSchema = new mongoose.Schema({
 
 const BloodBankUser = mongoose.model('BloodBankUser', bloodBankUserSchema);
 export default BloodBankUser;
+
+
+
+

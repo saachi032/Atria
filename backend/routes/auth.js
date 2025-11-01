@@ -1,6 +1,7 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import os from 'os';
 import User from '../models/User.js';
 import dotenv from 'dotenv';
 dotenv.config();
@@ -108,11 +109,62 @@ router.put('/me', requireAuth, async (req, res) => {
   }
 });
 
+// Get donor by ID (public endpoint for health card)
+router.get('/donor/:donorId', async (req, res) => {
+  try {
+    const { donorId } = req.params;
+    const user = await User.findById(donorId).select('-password');
+    if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
+    return res.json({ success: true, donor: user });
+  } catch (e) {
+    return res.status(500).json({ success: false, msg: 'Server error' });
+  }
+});
+
 // Generate Donor QR (returns a QR URL and payload)
 router.get('/qr', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.userId).select('-password');
     if (!user) return res.status(404).json({ success: false, msg: 'User not found' });
+    
+    // Create URL pointing to the health card page
+    let baseUrl = process.env.FRONTEND_URL;
+    
+    // If FRONTEND_URL is localhost or not set, detect network IP for mobile access in development
+    if (!baseUrl || baseUrl.includes('localhost')) {
+      if (process.env.NODE_ENV !== 'production') {
+        // In development, detect network IP for mobile access
+        const networkInterfaces = os.networkInterfaces();
+        let networkIp = 'localhost';
+        
+        // Find the first non-internal IPv4 address
+        if (networkInterfaces) {
+          for (const interfaceName of Object.keys(networkInterfaces)) {
+            const addresses = networkInterfaces[interfaceName];
+            if (addresses) {
+              for (const addr of addresses) {
+                if (addr.family === 'IPv4' && !addr.internal) {
+                  networkIp = addr.address;
+                  break;
+                }
+              }
+              if (networkIp !== 'localhost') break;
+            }
+          }
+        }
+        
+        baseUrl = `http://${networkIp}:5173`;
+      } else {
+        // In production, use the provided FRONTEND_URL or default to localhost
+        baseUrl = baseUrl || 'http://localhost:5173';
+      }
+    }
+    
+    const healthCardUrl = `${baseUrl}/donor-card/${user._id}`;
+    
+    // Generate QR code using the health card URL
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(healthCardUrl)}`;
+    
     const payload = {
       donorId: String(user._id),
       name: user.name || '',
@@ -120,8 +172,8 @@ router.get('/qr', requireAuth, async (req, res) => {
       city: user.city || '',
       state: user.state || '',
     };
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(JSON.stringify(payload))}`;
-    return res.json({ success: true, qrUrl, payload });
+    
+    return res.json({ success: true, qrUrl, payload, healthCardUrl });
   } catch (e) {
     return res.status(500).json({ success: false, msg: 'Server error' });
   }

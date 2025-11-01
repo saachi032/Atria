@@ -21,5 +21,47 @@ It simplifies the donation process, promotes awareness, and ensures timely acces
 - **Backend:** Node.js + Express.js  
 - **Database:** MongoDB  
 - **Authentication:** JWT (JSON Web Tokens)  
-- **Deployment:** Vercel / Render  
+- **Deployment:** Vercel / Render
+
+---
+
+## 🚀 Getting Started
+
+### Development Setup
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   cd backend && npm install
+   ```
+
+2. **Configure environment:**
+   - Create `backend/.env` with:
+     ```env
+     PORT=5001
+     MONGO_URI=your_mongodb_uri
+     JWT_SECRET=your_secret_key
+     ```
+
+3. **Start development servers:**
+   ```bash
+   # Terminal 1: Backend
+   cd backend && node index.js
+   
+   # Terminal 2: Frontend
+   npm run dev
+   ```
+
+4. **Access the app:**
+   - Local: `http://localhost:5173`
+   - Network: Vite shows your network IP (e.g., `http://192.168.x.x:5173`)
+
+### Production Deployment
+
+**Important:** Set `FRONTEND_URL` in your production environment:
+```env
+FRONTEND_URL=https://yourdomain.com
+```
+
+This ensures QR codes point to your deployed website instead of localhost.
 

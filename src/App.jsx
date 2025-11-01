@@ -13,6 +13,8 @@ import RegisterForm from "./components/RegisterForm";
 import Profile from "./components/Profile";
 import DonationHistory from "./components/DonationHistory";
 import ScheduleAppointment from "./components/ScheduleAppointment";
+import DonorHealthCard from "./components/DonorHealthCard";
+import Notifications from "./components/Notifications";
 
 // Hospital Pages
 import HospitalLogin from "./components/hospital/HospitalLogin";
@@ -40,6 +42,9 @@ export default function App() {
     <AuthProvider>
       <div className="bg-gray-100 min-h-screen flex flex-col">
         <Routes>
+          {/* Public Donor Health Card Route (no navbar) */}
+          <Route path="/donor-card/:donorId" element={<DonorHealthCard />} />
+
           {/* Hospital Protected Routes */}
           <Route path="/hospital/dashboard" element={<HospitalDashboard />} />
           <Route path="/hospital/inventory" element={<Inventory />} />
@@ -72,6 +77,7 @@ export default function App() {
                   <Route path="/profile" element={<Profile />} />
                   <Route path="/donation-history" element={<DonationHistory />} />
                   <Route path="/schedule-appointment" element={<ScheduleAppointment />} />
+                  <Route path="/notifications" element={<Notifications />} />
 
                   {/* Hospital Auth Routes */}
                   <Route path="/login/hospital" element={<HospitalLogin />} />

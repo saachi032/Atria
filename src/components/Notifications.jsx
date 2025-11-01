@@ -1,0 +1,381 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+
+const formatDateToDDMMYYYY = (dateString) => {
+  if (!dateString) return '';
+  const date = new Date(dateString);
+  if (!isNaN(date.getTime())) {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+  return dateString;
+};
+
+const RequestDetailModal = ({ request, hospitalDetails, bloodBankDetails, onClose }) => {
+  if (!request) return null;
+  
+  const orgDetails = hospitalDetails || bloodBankDetails;
+  const orgName = hospitalDetails ? 'Hospital' : 'Blood Bank';
+  
+  return (
+    <div 
+      className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="sticky top-0 bg-gradient-to-r from-red-600 to-red-700 text-white p-6 flex justify-between items-center">
+          <h3 className="text-2xl font-bold">Request Details</h3>
+          <button onClick={onClose} className="text-white hover:text-gray-200 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          {/* Patient Info */}
+          <div className="bg-red-50 rounded-lg p-4 border-l-4 border-red-600">
+            <h4 className="font-bold text-gray-800 mb-3">Patient Information</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <DetailItem label="Patient Name" value={request.patientName} />
+              {request.patientId && <DetailItem label="Patient ID" value={request.patientId} />}
+              <DetailItem label="Blood Type" value={
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-red-600 text-white font-semibold">
+                  {request.bloodType}
+                </span>
+              } />
+              <DetailItem label="Units Needed" value={`${request.units} unit(s)`} />
+              <DetailItem label="Urgency" value={
+                <UrgencyBadge urgency={request.urgency} />
+              } />
+              {request.reason && <DetailItem label="Reason" value={request.reason} className="col-span-2" />}
+              {request.doctorName && <DetailItem label="Doctor Name" value={request.doctorName} />}
+              <DetailItem label="Status" value={
+                <StatusBadge status={request.status} />
+              } />
+            </div>
+          </div>
+
+          {/* Hospital/Blood Bank Info */}
+          {orgDetails && (
+            <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-600">
+              <h4 className="font-bold text-gray-800 mb-3">{orgName} Information</h4>
+              <div className="grid grid-cols-2 gap-3">
+                <DetailItem label={`${orgName} Name`} value={orgDetails.name} />
+                {orgDetails.address && <DetailItem label="Address" value={orgDetails.address} className="col-span-2" />}
+                {orgDetails.city && <DetailItem label="City" value={orgDetails.city} />}
+                {orgDetails.state && <DetailItem label="State" value={orgDetails.state} />}
+                {orgDetails.contactNumber && <DetailItem label="Contact" value={orgDetails.contactNumber} />}
+                {orgDetails.email && <DetailItem label="Email" value={orgDetails.email} />}
+                {orgDetails.pocName && <DetailItem label="Point of Contact" value={orgDetails.pocName} />}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Link
+              to="/schedule-appointment"
+              className="px-6 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Schedule Donation
+            </Link>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DetailItem = ({ label, value, className = '' }) => (
+  <div className={className}>
+    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">{label}</span>
+    <div className="mt-1 text-sm font-semibold text-gray-800">{value}</div>
+  </div>
+);
+
+const UrgencyBadge = ({ urgency }) => {
+  const colors = {
+    Critical: 'bg-red-600 text-white',
+    High: 'bg-orange-500 text-white',
+    Medium: 'bg-yellow-500 text-white',
+    Low: 'bg-green-500 text-white',
+  };
+  return (
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${colors[urgency] || colors.Medium}`}>
+      {urgency}
+    </span>
+  );
+};
+
+const StatusBadge = ({ status }) => {
+  const colors = {
+    Pending: 'bg-yellow-100 text-yellow-800',
+    Approved: 'bg-blue-100 text-blue-800',
+    Declined: 'bg-red-100 text-red-800',
+    Fulfilled: 'bg-green-100 text-green-800',
+  };
+  return (
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${colors[status] || colors.Pending}`}>
+      {status}
+    </span>
+  );
+};
+
+export default function Notifications() {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedUrgency, setSelectedUrgency] = useState('All');
+  const [selectedNotification, setSelectedNotification] = useState(null);
+  const [requestDetails, setRequestDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [selectedUrgency]);
+
+  const loadNotifications = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Please log in to view notifications.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const url = selectedUrgency === 'All' 
+        ? '/api/notifications'
+        : `/api/notifications?urgency=${selectedUrgency}`;
+      
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        if (res.status === 401) {
+          setError('Your session has expired. Please log in again.');
+        } else {
+          setError('Failed to load notifications');
+        }
+        setNotifications([]);
+        return;
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setNotifications(data.notifications || []);
+        setError('');
+      } else {
+        setError(data.msg || 'Failed to load notifications');
+        setNotifications([]);
+      }
+    } catch (e) {
+      setError('Network error while loading notifications');
+      setNotifications([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (notificationId) => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const res = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.ok) {
+        // Update local state
+        setNotifications(prev => prev.map(n => 
+          n._id === notificationId ? { ...n, isRead: true } : n
+        ));
+      }
+    } catch (e) {
+      console.error('Error marking notification as read:', e);
+    }
+  };
+
+  const viewRequest = async (notification) => {
+    if (!notification.requestId || !notification.requestId._id) {
+      alert('Request details not available');
+      return;
+    }
+
+    setLoadingDetails(true);
+    setSelectedNotification(notification);
+    
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setLoadingDetails(false);
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/notifications/request/${notification.requestId._id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setRequestDetails({
+          request: data.request,
+          hospitalDetails: data.hospitalDetails,
+          bloodBankDetails: data.bloodBankDetails,
+        });
+      } else {
+        alert('Failed to load request details');
+      }
+    } catch (e) {
+      alert('Error loading request details');
+    } finally {
+      setLoadingDetails(false);
+    }
+  };
+
+  const closeModal = () => {
+    setSelectedNotification(null);
+    setRequestDetails(null);
+    // Mark notification as read when viewing
+    if (selectedNotification && !selectedNotification.isRead) {
+      markAsRead(selectedNotification._id);
+    }
+  };
+
+  const urgencyOptions = ['All', 'Critical', 'High', 'Medium', 'Low'];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50/30 to-gray-50 pt-28 pb-16">
+      <div className="text-center mb-10 px-4 sm:px-6 lg:px-8">
+        <h1 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-red-600 to-red-800 mb-3">
+          Notifications
+        </h1>
+        <p className="text-gray-600 text-lg">Blood requests matching your blood type</p>
+      </div>
+
+      <div className="max-w-6xl mx-auto sm:px-6 lg:px-8">
+        {/* Filter */}
+        <div className="bg-white rounded-xl shadow-lg p-4 mb-6 border border-gray-100">
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm font-semibold text-gray-700">Filter by Urgency:</span>
+            {urgencyOptions.map((urgency) => (
+              <button
+                key={urgency}
+                onClick={() => {
+                  setSelectedUrgency(urgency);
+                  setLoading(true);
+                }}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  selectedUrgency === urgency
+                    ? 'bg-red-600 text-white shadow-md'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {urgency}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border-l-4 border-red-500 text-red-700 px-4 py-3 rounded-lg mb-6 shadow-sm">
+            <div className="flex">
+              <svg className="w-5 h-5 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Notifications List */}
+        <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden">
+          {loading ? (
+            <div className="p-16 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+              <p className="text-gray-500 font-medium">Loading notifications...</p>
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="p-16 text-center">
+              <svg className="w-16 h-16 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+              </svg>
+              <p className="text-gray-500 font-medium">No notifications found.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {notifications.map((notification) => (
+                <div
+                  key={notification._id}
+                  className={`p-6 hover:bg-gray-50 transition-all ${
+                    !notification.isRead ? 'bg-red-50/50 border-l-4 border-red-600' : ''
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-bold text-gray-800">{notification.title}</h3>
+                        <UrgencyBadge urgency={notification.urgency} />
+                        {!notification.isRead && (
+                          <span className="inline-flex items-center justify-center w-2 h-2 bg-red-600 rounded-full"></span>
+                        )}
+                      </div>
+                      <p className="text-gray-600 mb-2">{notification.message}</p>
+                      <div className="flex items-center gap-4 text-sm text-gray-500">
+                        <span>From: {notification.hospitalName || notification.bloodBankName || 'Unknown'}</span>
+                        <span>•</span>
+                        <span>Units needed: {notification.unitsNeeded}</span>
+                        <span>•</span>
+                        <span>{formatDateToDDMMYYYY(notification.createdAt)}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <button
+                        onClick={() => viewRequest(notification)}
+                        className="px-4 py-2 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors text-sm whitespace-nowrap"
+                      >
+                        {loadingDetails ? 'Loading...' : 'View Request'}
+                      </button>
+                      {!notification.isRead && (
+                        <button
+                          onClick={() => markAsRead(notification._id)}
+                          className="px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm whitespace-nowrap"
+                        >
+                          Mark Read
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {requestDetails && (
+        <RequestDetailModal
+          request={requestDetails.request}
+          hospitalDetails={requestDetails.hospitalDetails}
+          bloodBankDetails={requestDetails.bloodBankDetails}
+          onClose={closeModal}
+        />
+      )}
+    </div>
+  );
+}
+

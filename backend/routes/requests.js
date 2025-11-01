@@ -2,6 +2,10 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import Request from '../models/Request.js';
+import Notification from '../models/Notification.js';
+import User from '../models/User.js';
+import HospitalUser from '../models/HospitalUser.js';
+import BloodBankUser from '../models/BloodBankUser.js';
 dotenv.config();
 
 const router = express.Router();
@@ -37,8 +41,45 @@ router.post('/', requireAuth, async (req, res) => {
       createdBy: req.userId,
     });
     await doc.save();
-    return res.status(201).json({ success: true, request: doc });
+
+    // Get hospital/blood bank info
+    let hospitalName = '';
+    let bloodBankName = '';
+    const hospitalUser = await HospitalUser.findById(req.userId);
+    const bloodBankUser = await BloodBankUser.findById(req.userId);
+    
+    if (hospitalUser) {
+      hospitalName = hospitalUser.hospitalName || hospitalUser.name || 'Hospital';
+    } else if (bloodBankUser) {
+      bloodBankName = bloodBankUser.name || 'Blood Bank';
+    }
+
+    // Find all users with matching blood type
+    const matchingUsers = await User.find({ bloodGroup: bloodType });
+    
+    // Create notifications for all matching users
+    const notifications = matchingUsers.map(user => ({
+      recipientId: user._id,
+      requestId: doc._id,
+      bloodType: bloodType,
+      urgency: urgency || 'Medium',
+      title: `${bloodType} Blood Request`,
+      message: `${hospitalName || bloodBankName} needs ${units} unit(s) of ${bloodType} blood${reason ? ` for ${reason}` : ''}.`,
+      hospitalName: hospitalName || null,
+      hospitalId: hospitalUser ? req.userId : null,
+      bloodBankName: bloodBankName || null,
+      bloodBankId: bloodBankUser ? req.userId : null,
+      unitsNeeded: units,
+      isRead: false,
+    }));
+
+    if (notifications.length > 0) {
+      await Notification.insertMany(notifications);
+    }
+
+    return res.status(201).json({ success: true, request: doc, notificationsSent: notifications.length });
   } catch (e) {
+    console.error('Error creating request:', e);
     return res.status(500).json({ success: false, msg: 'Server error' });
   }
 });

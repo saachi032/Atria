@@ -96,68 +96,118 @@ const Navbar = () => {
     </>
   );
 
-  const LoggedInLinks = () => (
-    <>
-      <li className="relative group">
-        <Link
-          to="/"
-          className={`nav-link relative px-3 py-2 rounded-lg transition-all duration-300 ease-in-out hover:text-red-600 hover:bg-red-50 ${isActive("/") ? "text-red-600 font-bold bg-red-50" : ""}`}
-        >
-          Home
-          {(isActive("/") || isActive("/about")) && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
-        </Link>
-        <div className="absolute left-0 top-full mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-white rounded-xl shadow-xl border border-gray-100 z-10 min-w-[160px] overflow-hidden">
-          <div className="py-2">
-            <Link to="/about" className="block w-full px-5 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 text-left transition-all duration-200 hover:pl-6">
-              About Us
-            </Link>
+  const LoggedInLinks = () => {
+    const [unreadCount, setUnreadCount] = useState(0);
+
+    useEffect(() => {
+      const fetchUnreadCount = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+
+        try {
+          const res = await fetch('/api/notifications/unread-count', {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+              setUnreadCount(data.count || 0);
+            }
+          }
+        } catch (e) {
+          // Silent fail
+        }
+      };
+
+      if (isLoggedIn) {
+        fetchUnreadCount();
+        // Refresh count every 30 seconds
+        const interval = setInterval(fetchUnreadCount, 30000);
+        return () => clearInterval(interval);
+      }
+    }, [isLoggedIn]);
+
+    return (
+      <>
+        <li className="relative group">
+          <Link
+            to="/"
+            className={`nav-link relative px-3 py-2 rounded-lg transition-all duration-300 ease-in-out hover:text-red-600 hover:bg-red-50 ${isActive("/") ? "text-red-600 font-bold bg-red-50" : ""}`}
+          >
+            Home
+            {(isActive("/") || isActive("/about")) && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
+          </Link>
+          <div className="absolute left-0 top-full mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-white rounded-xl shadow-xl border border-gray-100 z-10 min-w-[160px] overflow-hidden">
+            <div className="py-2">
+              <Link to="/about" className="block w-full px-5 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 text-left transition-all duration-200 hover:pl-6">
+                About Us
+              </Link>
+            </div>
           </div>
-        </div>
-      </li>
-      <li>
-        <Link to="/find-blood" className={`nav-link relative px-3 py-2 rounded-lg transition-all duration-300 ease-in-out hover:text-red-600 hover:bg-red-50 ${isActive("/find-blood") ? "text-red-600 font-bold bg-red-50" : ""}`}>
-          Find Blood
-          {isActive("/find-blood") && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
-        </Link>
-      </li>
-      {/* --- NEW LINK ADDED HERE --- */}
-      <li>
-        <Link to="/schedule-appointment" className={`nav-link relative px-3 py-2 rounded-lg transition-all duration-300 ease-in-out hover:text-red-600 hover:bg-red-50 ${isActive("/schedule-appointment") ? "text-red-600 font-bold bg-red-50" : ""}`}>
-          Schedule Appointment
-          {isActive("/schedule-appointment") && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
-        </Link>
-      </li>
-      <li>
-        <Link to="/dashboard" className={`nav-link relative px-3 py-2 rounded-lg transition-all duration-300 ease-in-out hover:text-red-600 hover:bg-red-50 ${isActive("/dashboard") ? "text-red-600 font-bold bg-red-50" : ""}`}>
-          Dashboard
-          {isActive("/dashboard") && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
-        </Link>
-      </li>
-      <li className="relative group">
-        <span className={`nav-link cursor-pointer px-3 py-2 rounded-lg font-semibold select-none transition-all duration-300 hover:bg-gray-50 hover:text-gray-700 ${isActive("/profile") || isActive("/donation-history") ? "text-red-600 font-bold bg-red-50" : ""}`}>
-          My Profile
-          <svg className="inline-block ml-1 w-4 h-4 transition-transform duration-300 group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-           {(isActive("/profile") || isActive("/donation-history")) && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
-        </span>
-        <div className="absolute right-0 top-full mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-white rounded-xl shadow-xl border border-gray-100 z-10 min-w-[200px] overflow-hidden">
-          <div className="py-2">
-            <Link to="/profile" className="block w-full px-5 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 text-left transition-all duration-200 hover:pl-6">
-              Profile
-            </Link>
-            <Link to="/donation-history" className="block w-full px-5 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 text-left transition-all duration-200 hover:pl-6">
-              Donation History
-            </Link>
-            <div className="border-t border-gray-100 my-1"></div>
-            <button onClick={handleLogout} className="block w-full px-5 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 text-left transition-all duration-200 hover:pl-6">
-              Logout
-            </button>
+        </li>
+        <li>
+          <Link to="/find-blood" className={`nav-link relative px-3 py-2 rounded-lg transition-all duration-300 ease-in-out hover:text-red-600 hover:bg-red-50 ${isActive("/find-blood") ? "text-red-600 font-bold bg-red-50" : ""}`}>
+            Find Blood
+            {isActive("/find-blood") && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
+          </Link>
+        </li>
+        {/* --- NOTIFICATIONS LINK --- */}
+        <li className="relative">
+          <Link 
+            to="/notifications" 
+            className={`nav-link relative px-3 py-2 rounded-lg transition-all duration-300 ease-in-out hover:text-red-600 hover:bg-red-50 flex items-center gap-2 ${isActive("/notifications") ? "text-red-600 font-bold bg-red-50" : ""}`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            Notifications
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
+            {isActive("/notifications") && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
+          </Link>
+        </li>
+        {/* --- NEW LINK ADDED HERE --- */}
+        <li>
+          <Link to="/schedule-appointment" className={`nav-link relative px-3 py-2 rounded-lg transition-all duration-300 ease-in-out hover:text-red-600 hover:bg-red-50 ${isActive("/schedule-appointment") ? "text-red-600 font-bold bg-red-50" : ""}`}>
+            Schedule Appointment
+            {isActive("/schedule-appointment") && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
+          </Link>
+        </li>
+        <li>
+          <Link to="/dashboard" className={`nav-link relative px-3 py-2 rounded-lg transition-all duration-300 ease-in-out hover:text-red-600 hover:bg-red-50 ${isActive("/dashboard") ? "text-red-600 font-bold bg-red-50" : ""}`}>
+            Dashboard
+            {isActive("/dashboard") && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
+          </Link>
+        </li>
+        <li className="relative group">
+          <span className={`nav-link cursor-pointer px-3 py-2 rounded-lg font-semibold select-none transition-all duration-300 hover:bg-gray-50 hover:text-gray-700 ${isActive("/profile") || isActive("/donation-history") ? "text-red-600 font-bold bg-red-50" : ""}`}>
+            My Profile
+            <svg className="inline-block ml-1 w-4 h-4 transition-transform duration-300 group-hover:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+             {(isActive("/profile") || isActive("/donation-history")) && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-full"></div>}
+          </span>
+          <div className="absolute right-0 top-full mt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transform translate-y-2 group-hover:translate-y-0 transition-all duration-300 bg-white rounded-xl shadow-xl border border-gray-100 z-10 min-w-[200px] overflow-hidden">
+            <div className="py-2">
+              <Link to="/profile" className="block w-full px-5 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 text-left transition-all duration-200 hover:pl-6">
+                Profile
+              </Link>
+              <Link to="/donation-history" className="block w-full px-5 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 text-left transition-all duration-200 hover:pl-6">
+                Donation History
+              </Link>
+              <div className="border-t border-gray-100 my-1"></div>
+              <button onClick={handleLogout} className="block w-full px-5 py-3 hover:bg-red-50 hover:text-red-600 text-gray-700 text-left transition-all duration-200 hover:pl-6">
+                Logout
+              </button>
+            </div>
           </div>
-        </div>
-      </li>
-    </>
-  );
+        </li>
+      </>
+    );
+  };
 
   return (
     <nav
@@ -196,6 +246,7 @@ const Navbar = () => {
             <Link to="/" className={`block px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${isActive("/") ? "text-red-600 font-bold bg-red-50" : "text-gray-700"}`}>Home</Link>
             <Link to="/about" className="block px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600 text-gray-700 ml-4">About Us</Link>
             <Link to="/find-blood" className={`block px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${isActive("/find-blood") ? "text-red-600 font-bold bg-red-50" : "text-gray-700"}`}>Find Blood</Link>
+            <Link to="/notifications" className={`block px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${isActive("/notifications") ? "text-red-600 font-bold bg-red-50" : "text-gray-700"}`}>Notifications</Link>
             {/* --- NEW LINK ADDED HERE --- */}
             <Link to="/schedule-appointment" className={`block px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${isActive("/schedule-appointment") ? "text-red-600 font-bold bg-red-50" : "text-gray-700"}`}>Schedule Appointment</Link>
             <Link to="/dashboard" className={`block px-4 py-3 rounded-lg transition-all duration-200 hover:bg-red-50 hover:text-red-600 ${isActive("/dashboard") ? "text-red-600 font-bold bg-red-50" : "text-gray-700"}`}>Dashboard</Link>

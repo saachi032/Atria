@@ -34,3 +34,7 @@ const hospitalUserSchema = new mongoose.Schema({
 
 const HospitalUser = mongoose.model('HospitalUser', hospitalUserSchema);
 export default HospitalUser;
+
+
+
+

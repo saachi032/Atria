@@ -9,6 +9,7 @@ import appointmentsRoutes from './routes/appointments.js';
 import requestsRoutes from './routes/requests.js';
 import donationsRoutes from './routes/donations.js';
 import alertsRoutes from './routes/alerts.js';
+import notificationsRoutes from './routes/notifications.js';
 
 // Load .env
 dotenv.config();
@@ -27,6 +28,7 @@ app.use('/api/appointments', appointmentsRoutes);
 app.use('/api/requests', requestsRoutes);
 app.use('/api/donations', donationsRoutes);
 app.use('/api/alerts', alertsRoutes);
+app.use('/api/notifications', notificationsRoutes);
 
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI, {
@@ -36,7 +38,7 @@ mongoose.connect(process.env.MONGO_URI, {
   .then(() => {
     console.log('✅ MongoDB connected');
     // Start server only after DB is up
-    app.listen(process.env.PORT, () => {
+    app.listen(process.env.PORT, '0.0.0.0', () => {
       console.log(`Server started on port ${process.env.PORT}`);
     });
   })
