@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 // --- Helper Components ---
 const FormInput = ({ id, label, type = "text", placeholder, value, onChange, ...props }) => (
@@ -40,6 +41,7 @@ const FormSelect = ({ id, label, children, value, onChange }) => (
 
 // --- Main Component ---
 export default function ScheduleAppointment() {
+  const [searchParams] = useSearchParams();
   const [formData, setFormData] = useState({
     location: '',
     donationType: 'whole-blood',
@@ -62,7 +64,41 @@ export default function ScheduleAppointment() {
         phone: u.phone || '',
       }));
     }
-  }, []);
+
+    // Auto-fill from notification data (query params)
+    const hospitalName = searchParams.get('hospitalName');
+    const location = searchParams.get('location');
+    const bloodType = searchParams.get('bloodType');
+
+    if (location) {
+      setFormData(prev => ({
+        ...prev,
+        location: location,
+      }));
+    } else if (hospitalName) {
+      // Try to match hospital name with available options
+      const hospitalOptions = [
+        'City Hospital, Navi Mumbai',
+        'Central Blood Bank, Mumbai',
+        'Mobile Donation Camp, Vashi',
+        'Redwood Medical Center, Panvel',
+      ];
+      // If hospital name matches any option, use it
+      const matchedLocation = hospitalOptions.find(opt => opt.toLowerCase().includes(hospitalName.toLowerCase()));
+      if (matchedLocation) {
+        setFormData(prev => ({
+          ...prev,
+          location: matchedLocation,
+        }));
+      } else {
+        // If no match, use the hospital name with a generic city
+        setFormData(prev => ({
+          ...prev,
+          location: `${hospitalName}, City`,
+        }));
+      }
+    }
+  }, [searchParams]);
 
   const [lastDonationInput, setLastDonationInput] = useState('');
   const [eligibility, setEligibility] = useState({
@@ -164,11 +200,36 @@ export default function ScheduleAppointment() {
     );
   }
 
+  // Get notification data from URL params
+  const hospitalName = searchParams.get('hospitalName');
+  const bloodType = searchParams.get('bloodType');
+  const urgency = searchParams.get('urgency');
+  const unitsNeeded = searchParams.get('unitsNeeded');
+  const message = searchParams.get('message');
+  const notificationId = searchParams.get('notificationId');
+
   return (
     <div className="min-h-screen bg-gray-50 pt-28 pb-16">
       <div className="text-center mb-10 px-4">
         <h1 className="text-4xl font-extrabold text-gray-800">Schedule a Donation</h1>
         <p className="text-gray-500 mt-2 max-w-2xl mx-auto">Your decision to donate can save a life. Please fill out the form below to book your slot.</p>
+        {hospitalName && (
+          <div className="mt-4 max-w-2xl mx-auto bg-blue-50 border-l-4 border-blue-600 p-4 rounded-lg text-left">
+            <p className="text-sm font-semibold text-blue-800 mb-2">📋 Donation Request from {hospitalName}</p>
+            {bloodType && (
+              <p className="text-sm text-blue-700">Blood Type Needed: <span className="font-bold text-red-600">{bloodType}</span></p>
+            )}
+            {urgency && (
+              <p className="text-sm text-blue-700">Urgency: <span className="font-semibold">{urgency}</span></p>
+            )}
+            {unitsNeeded && (
+              <p className="text-sm text-blue-700">Units Needed: <span className="font-semibold">{unitsNeeded}</span></p>
+            )}
+            {message && (
+              <p className="text-sm text-blue-700 mt-2">{message}</p>
+            )}
+          </div>
+        )}
       </div>
       <div className="w-full bg-white shadow-md">
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">

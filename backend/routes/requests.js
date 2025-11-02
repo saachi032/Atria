@@ -16,7 +16,11 @@ const requireAuth = (req, res, next) => {
   if (!token) return res.status(401).json({ success: false, msg: 'Unauthorized' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.userId = decoded.userId;
+    // Support userId (donors), hospitalUserId (hospitals), and bloodBankUserId (blood banks)
+    req.userId = decoded.userId || decoded.hospitalUserId || decoded.bloodBankUserId;
+    if (!req.userId) {
+      return res.status(401).json({ success: false, msg: 'Invalid token' });
+    }
     return next();
   } catch (e) {
     return res.status(401).json({ success: false, msg: 'Invalid token' });
@@ -75,6 +79,9 @@ router.post('/', requireAuth, async (req, res) => {
 
     if (notifications.length > 0) {
       await Notification.insertMany(notifications);
+      console.log(`✅ Created ${notifications.length} notifications for blood type ${bloodType}`);
+    } else {
+      console.log(`⚠️ No matching donors found for blood type ${bloodType}`);
     }
 
     return res.status(201).json({ success: true, request: doc, notificationsSent: notifications.length });

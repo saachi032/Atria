@@ -15,7 +15,12 @@ const requireAuth = (req, res, next) => {
   if (!token) return res.status(401).json({ success: false, msg: 'Unauthorized' });
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // Support userId (donors), hospitalUserId (hospitals), and bloodBankUserId (blood banks)
+    // For notifications, we only want donors (userId) to access them
     req.userId = decoded.userId;
+    if (!req.userId) {
+      return res.status(401).json({ success: false, msg: 'Invalid token - donors only' });
+    }
     return next();
   } catch (e) {
     return res.status(401).json({ success: false, msg: 'Invalid token' });
@@ -33,7 +38,15 @@ router.get('/', requireAuth, async (req, res) => {
     
     const notifications = await Notification.find(query)
       .sort({ createdAt: -1 })
-      .populate('requestId', 'patientName bloodType units urgency status reason doctorName');
+      .populate({
+        path: 'requestId',
+        select: 'patientName bloodType units urgency status reason doctorName',
+        // Don't fail if requestId is null (for alerts)
+        justOne: true,
+        options: { lean: true }
+      });
+    
+    console.log(`✅ Retrieved ${notifications.length} notifications for user ${req.userId}`);
     
     return res.json({ success: true, notifications });
   } catch (e) {
