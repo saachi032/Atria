@@ -35,10 +35,10 @@ export default function HospitalRegister() {
   const [pincode, setPincode] = useState("");
   const stateNames = Object.keys(statesAndCities).sort();
 
-  // OTP flow disabled (no mobile OTP integration yet)
+  // OTP flow for POC mobile verification
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
-  const [isPhoneVerified, setIsPhoneVerified] = useState(true);
+  const [isPhoneVerified, setIsPhoneVerified] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -67,16 +67,68 @@ export default function HospitalRegister() {
     setForm(prev => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   }
 
-  // --- OTP Handlers (disabled) ---
-  function handleSendOtp() {
-    // No OTP integration; treat as verified
-    setIsOtpSent(false);
-    setIsPhoneVerified(true);
+  // --- OTP Handlers ---
+  async function handleSendOtp() {
+    if (form.pocMobile.length < 10 || !/^\d+$/.test(form.pocMobile)) {
+      alert('Please enter a valid 10-digit POC mobile number.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: form.pocMobile })
+      });
+      const data = await res.json();
+      setLoading(false);
+      
+      if (data.success) {
+        alert(`OTP sent successfully to ${form.pocMobile}`);
+        setIsOtpSent(true);
+        setError("");
+      } else {
+        setError(data.message || 'Failed to send OTP');
+        alert(data.message || 'Failed to send OTP');
+      }
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to send OTP. Please try again.");
+      alert("Failed to send OTP. Please try again.");
+    }
   }
 
-  function handleVerifyOtp() {
-    // No OTP integration; already verified
-    setIsPhoneVerified(true);
+  async function handleVerifyOtp() {
+    if (otp.length !== 6 || !/^\d+$/.test(otp)) {
+      alert("Invalid OTP. Please enter the 6-digit code.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: form.pocMobile, otp })
+      });
+      const data = await res.json();
+      setLoading(false);
+      
+      if (data.success) {
+        alert("POC mobile number verified successfully!");
+        setIsPhoneVerified(true);
+        setError("");
+      } else {
+        setError(data.message || 'Invalid OTP');
+        alert(data.message || 'Invalid OTP. Please try again.');
+        setOtp(""); // Clear OTP input on failure
+      }
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to verify OTP. Please try again.");
+      alert("Failed to verify OTP. Please try again.");
+    }
   }
 
   // --- Form Submission ---
@@ -214,11 +266,24 @@ export default function HospitalRegister() {
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="pocMobile" className={labelStyle}>POC Mobile Number</label>
-                  <input id="pocMobile" name="pocMobile" type="tel" value={form.pocMobile} onChange={handleChange} className={inputStyle} />
+                  <div className="flex gap-2">
+                    <input id="pocMobile" name="pocMobile" type="tel" value={form.pocMobile} onChange={handleChange} className={inputStyle} disabled={isPhoneVerified} />
+                    <button type="button" onClick={handleSendOtp} disabled={isOtpSent || isPhoneVerified} className="py-2 px-4 rounded-md text-white bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 whitespace-nowrap">
+                      {isPhoneVerified ? 'Verified ✓' : 'Send OTP'}
+                    </button>
+                  </div>
                 </div>
                 <div><label htmlFor="pocEmail" className={labelStyle}>POC Email (This will be your username)</label><input id="pocEmail" name="pocEmail" type="email" value={form.pocEmail} onChange={handleChange} className={inputStyle} /></div>
               </div>
-              {/* OTP block removed (no integration) */}
+              {isOtpSent && !isPhoneVerified && (
+                <div className="p-4 bg-blue-50 rounded-md">
+                  <label htmlFor="otp" className={labelStyle}>Enter OTP sent to {form.pocMobile}</label>
+                  <div className="flex items-center gap-2">
+                    <input id="otp" name="otp" value={otp} onChange={(e) => setOtp(e.target.value)} className={inputStyle} maxLength="6" placeholder="6-digit code" />
+                    <button type="button" onClick={handleVerifyOtp} className="py-2 px-4 rounded-md text-white bg-green-500 hover:bg-green-600">Confirm</button>
+                  </div>
+                </div>
+              )}
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
                   <label htmlFor="password" className={labelStyle}>Create Password</label>
@@ -233,7 +298,7 @@ export default function HospitalRegister() {
           {/* Submission */}
           <div>
             <div className="flex items-center mb-6"><input id="agreed" name="agreed" type="checkbox" checked={form.agreed} onChange={handleChange} className="h-4 w-4 text-blue-600 focus:ring-blue-500" /><label htmlFor="agreed" className="ml-2 block text-sm">I confirm that all the information provided is accurate and agree to the terms of service.</label></div>
-            <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400">
+            <button type="submit" disabled={!isPhoneVerified || loading} className="w-full flex justify-center py-3 px-4 rounded-md shadow-sm text-lg font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400">
               {loading ? "Registering..." : "Complete Registration"}
             </button>
           </div>

@@ -69,21 +69,66 @@ export default function RegisterForm() {
     setForm(newFormState);
   }
 
-  function handleSendOtp() {
+  async function handleSendOtp() {
     if (form.phone.length !== 10 || !/^\d+$/.test(form.phone)) {
       alert('Please enter a valid 10-digit phone number.');
       return;
     }
-    alert(`An OTP has been sent to ${form.phone}. (This is a simulation)`);
-    setIsOtpSent(true);
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: form.phone })
+      });
+      const data = await res.json();
+      setLoading(false);
+      
+      if (data.success) {
+        alert(`OTP sent successfully to ${form.phone}`);
+        setIsOtpSent(true);
+        setError("");
+      } else {
+        setError(data.message || 'Failed to send OTP');
+        alert(data.message || 'Failed to send OTP');
+      }
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to send OTP. Please try again.");
+      alert("Failed to send OTP. Please try again.");
+    }
   }
 
-  function handleVerifyOtp() {
-    if (otp.length === 4 && /^\d+$/.test(otp)) {
-      alert("Phone number verified successfully!");
-      setIsPhoneVerified(true);
-    } else {
-      alert("Invalid OTP. Please enter the 4-digit code.");
+  async function handleVerifyOtp() {
+    if (otp.length !== 6 || !/^\d+$/.test(otp)) {
+      alert("Invalid OTP. Please enter the 6-digit code.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: form.phone, otp })
+      });
+      const data = await res.json();
+      setLoading(false);
+      
+      if (data.success) {
+        alert("Phone number verified successfully!");
+        setIsPhoneVerified(true);
+        setError("");
+      } else {
+        setError(data.message || 'Invalid OTP');
+        alert(data.message || 'Invalid OTP. Please try again.');
+        setOtp(""); // Clear OTP input on failure
+      }
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to verify OTP. Please try again.");
+      alert("Failed to verify OTP. Please try again.");
     }
   }
 
@@ -170,7 +215,7 @@ export default function RegisterForm() {
             <div className="p-4 bg-gray-50 rounded-md">
               <label className={labelStyle}>Enter OTP</label>
               <div className="flex items-center gap-2">
-                <input name="otp" value={otp} onChange={(e) => setOtp(e.target.value)} className={inputStyle} placeholder="4-digit code" maxLength="4" />
+                <input name="otp" value={otp} onChange={(e) => setOtp(e.target.value)} className={inputStyle} placeholder="6-digit code" maxLength="6" />
                 <button type="button" onClick={handleVerifyOtp} className="py-2 px-4 rounded-md text-white bg-green-500 hover:bg-green-600 whitespace-nowrap">Confirm OTP</button>
               </div>
             </div>

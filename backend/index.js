@@ -12,6 +12,7 @@ import donationsRoutes from './routes/donations.js';
 import alertsRoutes from './routes/alerts.js';
 import notificationsRoutes from './routes/notifications.js';
 import insightsRoutes from './routes/insights.js';
+import otpRoutes from './routes/otp.js';
 
 // Load .env
 dotenv.config();
@@ -33,6 +34,7 @@ app.use('/api/donations', donationsRoutes);
 app.use('/api/alerts', alertsRoutes);
 app.use('/api/notifications', notificationsRoutes);
 app.use('/api/insights', insightsRoutes);
+app.use('/api/otp', otpRoutes);
 
 // Start server (insights API doesn't require MongoDB)
 const PORT = process.env.PORT || 5001;

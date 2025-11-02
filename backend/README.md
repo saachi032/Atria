@@ -10,11 +10,23 @@ This is the Node.js + Express backend for the Atria App, using MongoDB and JWT a
    ```
 2. Create a `.env` file in `backend/` with:
    ```env
+   # Server Configuration
    PORT=5001
-   MONGO_URI=mongodb+srv://atriauser:ATRIAUSER123@atriaapp.6ajk8y5.mongodb.net/?appName=AtriaApp
-   JWT_SECRET=mysecretkey123
    FRONTEND_URL=http://localhost:5173
+
+   # MongoDB Configuration
+   MONGO_URI=mongodb+srv://atriauser:ATRIAUSER123@atriaapp.6ajk8y5.mongodb.net/?appName=AtriaApp
+
+   # JWT Secret (change this to a secure random string in production)
+   JWT_SECRET=mysecretkey123
+
+   # Twilio Configuration for OTP SMS
+   TWILIO_ACCOUNT_SID=your_account_sid_here
+   TWILIO_AUTH_TOKEN=your_auth_token_here
+   TWILIO_PHONE_NUMBER=+91XXXXXXXXXX
    ```
+   
+   **Note:** You can also copy `.env.example` to `.env` and fill in your values.
 
 3. Start the server:
    ```bash

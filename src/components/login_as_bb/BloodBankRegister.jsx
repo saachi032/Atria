@@ -69,21 +69,66 @@ export default function BloodBankRegister() {
   }
 
   // OTP Handlers for POC Mobile
-  function handleSendOtp() {
+  async function handleSendOtp() {
     if (form.pocMobile.length < 10 || !/^\d+$/.test(form.pocMobile)) {
       alert('Please enter a valid 10-digit POC mobile number.');
       return;
     }
-    alert(`An OTP has been sent to ${form.pocMobile}. (Simulation)`);
-    setIsOtpSent(true);
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/otp/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: form.pocMobile })
+      });
+      const data = await res.json();
+      setLoading(false);
+      
+      if (data.success) {
+        alert(`OTP sent successfully to ${form.pocMobile}`);
+        setIsOtpSent(true);
+        setError("");
+      } else {
+        setError(data.message || 'Failed to send OTP');
+        alert(data.message || 'Failed to send OTP');
+      }
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to send OTP. Please try again.");
+      alert("Failed to send OTP. Please try again.");
+    }
   }
 
-  function handleVerifyOtp() {
-    if (otp === "1234") { // Simulate correct OTP
-      alert("POC mobile number verified successfully!");
-      setIsPhoneVerified(true);
-    } else {
-      alert("Invalid OTP. Please try again.");
+  async function handleVerifyOtp() {
+    if (otp.length !== 6 || !/^\d+$/.test(otp)) {
+      alert("Invalid OTP. Please enter the 6-digit code.");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await fetch('/api/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: form.pocMobile, otp })
+      });
+      const data = await res.json();
+      setLoading(false);
+      
+      if (data.success) {
+        alert("POC mobile number verified successfully!");
+        setIsPhoneVerified(true);
+        setError("");
+      } else {
+        setError(data.message || 'Invalid OTP');
+        alert(data.message || 'Invalid OTP. Please try again.');
+        setOtp(""); // Clear OTP input on failure
+      }
+    } catch (e) {
+      setLoading(false);
+      setError("Failed to verify OTP. Please try again.");
+      alert("Failed to verify OTP. Please try again.");
     }
   }
 
@@ -188,7 +233,7 @@ export default function BloodBankRegister() {
             <div className="space-y-6">
               <div className="grid md:grid-cols-2 gap-6"><div><label htmlFor="pocName" className={labelStyle}>POC Full Name</label><input id="pocName" name="pocName" value={form.pocName} onChange={handleChange} className={inputStyle} /></div><div><label htmlFor="pocDesignation" className={labelStyle}>POC Designation</label><input id="pocDesignation" name="pocDesignation" value={form.pocDesignation} onChange={handleChange} className={inputStyle} /></div></div>
               <div className="grid md:grid-cols-2 gap-6"><div><label htmlFor="pocMobile" className={labelStyle}>POC Mobile Number</label><div className="flex gap-2"><input id="pocMobile" name="pocMobile" type="tel" value={form.pocMobile} onChange={handleChange} className={inputStyle} disabled={isPhoneVerified} /><button type="button" onClick={handleSendOtp} disabled={isOtpSent} className="py-2 px-4 rounded-md text-white bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 whitespace-nowrap">{isPhoneVerified ? 'Verified ✓' : 'Verify'}</button></div></div><div><label htmlFor="pocEmail" className={labelStyle}>POC Email (This is your username)</label><input id="pocEmail" name="pocEmail" type="email" value={form.pocEmail} onChange={handleChange} className={inputStyle} /></div></div>
-              {isOtpSent && !isPhoneVerified && (<div className="p-4 bg-blue-50 rounded-md grid md:grid-cols-2 gap-6 items-center"><label htmlFor="otp" className={labelStyle}>Enter OTP sent to {form.pocMobile}</label><div className="flex items-center gap-2"><input id="otp" name="otp" value={otp} onChange={(e) => setOtp(e.target.value)} className={inputStyle} maxLength="4" placeholder="4-digit code" /><button type="button" onClick={handleVerifyOtp} className="py-2 px-4 rounded-md text-white bg-green-500 hover:bg-green-600">Confirm</button></div></div>)}
+              {isOtpSent && !isPhoneVerified && (<div className="p-4 bg-blue-50 rounded-md grid md:grid-cols-2 gap-6 items-center"><label htmlFor="otp" className={labelStyle}>Enter OTP sent to {form.pocMobile}</label><div className="flex items-center gap-2"><input id="otp" name="otp" value={otp} onChange={(e) => setOtp(e.target.value)} className={inputStyle} maxLength="6" placeholder="6-digit code" /><button type="button" onClick={handleVerifyOtp} className="py-2 px-4 rounded-md text-white bg-green-500 hover:bg-green-600">Confirm</button></div></div>)}
               <div className="grid md:grid-cols-2 gap-6"><div><label htmlFor="password" className={labelStyle}>Create Password</label><input id="password" name="password" type="password" value={form.password} onChange={handleChange} className={inputStyle} /><p className="text-xs text-gray-500 mt-1">8+ chars, 1 number, 1 special character.</p></div><div><label htmlFor="confirmPassword" className={labelStyle}>Confirm Password</label><input id="confirmPassword" name="confirmPassword" type="password" value={form.confirmPassword} onChange={handleChange} className={inputStyle} /></div></div>
             </div>
           </fieldset>
