@@ -1,8 +1,15 @@
 // Service to generate/simulate real-time blood bank data
-// This simulates real-time variations based on static data
-// Can be replaced with actual API calls when available
+// This service tries to fetch from API Setu first, then falls back to simulated data
+// To use API Setu, configure API_SETU_API_KEY or API_SETU_ACCESS_TOKEN in .env file
 
 import { statsData, todaysStatsData, statewiseBars, statewiseTableData } from './baseBloodData.js';
+import {
+  fetchBloodCentresStats,
+  fetchTodaysBloodAvailability,
+  fetchStatewiseStats,
+  transformApiSetuStatsData,
+  isApiSetuConfigured
+} from './apiSetuService.js';
 
 // Helper function to add random variation (±5% to ±15%)
 const addVariation = (value, minVariation = 0.05, maxVariation = 0.15) => {
@@ -12,8 +19,8 @@ const addVariation = (value, minVariation = 0.05, maxVariation = 0.15) => {
   return Math.max(0, Math.round(value + change));
 };
 
-// Generate real-time stats data with variations
-export const getRealTimeStatsData = () => {
+// Generate real-time stats data with variations (fallback function)
+const getSimulatedStatsData = () => {
   return statsData.map((stat) => {
     const newPieData = stat.pieData.map((item) => ({
       ...item,
@@ -36,8 +43,28 @@ export const getRealTimeStatsData = () => {
   });
 };
 
-// Generate real-time today's stats data
-export const getRealTimeTodaysStatsData = () => {
+// Generate real-time stats data - tries API Setu first, then falls back to simulation
+export const getRealTimeStatsData = async () => {
+  try {
+    if (isApiSetuConfigured()) {
+      const apiData = await fetchBloodCentresStats();
+      if (apiData) {
+        const transformed = transformApiSetuStatsData(apiData);
+        if (transformed && transformed.statsData) {
+          return transformed.statsData;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('API Setu fetch failed, using simulated data:', error.message);
+  }
+  
+  // Fallback to simulated data
+  return getSimulatedStatsData();
+};
+
+// Generate real-time today's stats data (fallback function)
+const getSimulatedTodaysStatsData = () => {
   return todaysStatsData.map((stat) => {
     const newBarData = stat.barData.map((item) => ({
       ...item,
@@ -54,8 +81,28 @@ export const getRealTimeTodaysStatsData = () => {
   });
 };
 
-// Generate real-time statewise bars data
-export const getRealTimeStatewiseBars = () => {
+// Generate real-time today's stats data - tries API Setu first, then falls back to simulation
+export const getRealTimeTodaysStatsData = async () => {
+  try {
+    if (isApiSetuConfigured()) {
+      const apiData = await fetchTodaysBloodAvailability();
+      if (apiData) {
+        const transformed = transformApiSetuStatsData(apiData);
+        if (transformed && transformed.todaysStatsData) {
+          return transformed.todaysStatsData;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('API Setu fetch failed, using simulated data:', error.message);
+  }
+  
+  // Fallback to simulated data
+  return getSimulatedTodaysStatsData();
+};
+
+// Generate real-time statewise bars data (fallback function)
+const getSimulatedStatewiseBars = () => {
   return statewiseBars.map((bar) => {
     const newBarData = bar.barData.map((item) => ({
       ...item,
@@ -69,8 +116,8 @@ export const getRealTimeStatewiseBars = () => {
   });
 };
 
-// Generate real-time statewise table data
-export const getRealTimeStatewiseTableData = () => {
+// Generate real-time statewise table data (fallback function)
+const getSimulatedStatewiseTableData = () => {
   return statewiseTableData.map((row) => ({
     ...row,
     bloodCentres: addVariation(row.bloodCentres, 0.02, 0.08),
@@ -80,14 +127,88 @@ export const getRealTimeStatewiseTableData = () => {
   }));
 };
 
-// Main function to get all real-time data
-export const getAllRealTimeData = () => {
+// Generate real-time statewise bars data - tries API Setu first, then falls back to simulation
+export const getRealTimeStatewiseBars = async () => {
+  try {
+    if (isApiSetuConfigured()) {
+      const apiData = await fetchStatewiseStats();
+      if (apiData) {
+        const transformed = transformApiSetuStatsData(apiData);
+        if (transformed && transformed.statewiseBars) {
+          return transformed.statewiseBars;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('API Setu fetch failed, using simulated data:', error.message);
+  }
+  
+  // Fallback to simulated data
+  return getSimulatedStatewiseBars();
+};
+
+// Generate real-time statewise table data - tries API Setu first, then falls back to simulation
+export const getRealTimeStatewiseTableData = async () => {
+  try {
+    if (isApiSetuConfigured()) {
+      const apiData = await fetchStatewiseStats();
+      if (apiData) {
+        const transformed = transformApiSetuStatsData(apiData);
+        if (transformed && transformed.statewiseTableData) {
+          return transformed.statewiseTableData;
+        }
+      }
+    }
+  } catch (error) {
+    console.warn('API Setu fetch failed, using simulated data:', error.message);
+  }
+  
+  // Fallback to simulated data
+  return getSimulatedStatewiseTableData();
+};
+
+// Main function to get all real-time data - tries API Setu first, then falls back to simulation
+export const getAllRealTimeData = async () => {
+  try {
+    if (isApiSetuConfigured()) {
+      // Try to fetch all data from API Setu
+      const [statsResult, todaysResult, statewiseResult] = await Promise.allSettled([
+        fetchBloodCentresStats(),
+        fetchTodaysBloodAvailability(),
+        fetchStatewiseStats()
+      ]);
+
+      const apiData = {
+        statsData: statsResult.status === 'fulfilled' && statsResult.value ? transformApiSetuStatsData(statsResult.value)?.statsData : null,
+        todaysStatsData: todaysResult.status === 'fulfilled' && todaysResult.value ? transformApiSetuStatsData(todaysResult.value)?.todaysStatsData : null,
+        statewiseBars: statewiseResult.status === 'fulfilled' && statewiseResult.value ? transformApiSetuStatsData(statewiseResult.value)?.statewiseBars : null,
+        statewiseTableData: statewiseResult.status === 'fulfilled' && statewiseResult.value ? transformApiSetuStatsData(statewiseResult.value)?.statewiseTableData : null
+      };
+
+      // If we got any real data, use it; otherwise fall back
+      if (apiData.statsData || apiData.todaysStatsData || apiData.statewiseBars) {
+        return {
+          statsData: apiData.statsData || getSimulatedStatsData(),
+          todaysStatsData: apiData.todaysStatsData || getSimulatedTodaysStatsData(),
+          statewiseBars: apiData.statewiseBars || getSimulatedStatewiseBars(),
+          statewiseTableData: apiData.statewiseTableData || getSimulatedStatewiseTableData(),
+          timestamp: new Date().toISOString(),
+          source: 'api-setu'
+        };
+      }
+    }
+  } catch (error) {
+    console.warn('API Setu fetch failed, using simulated data:', error.message);
+  }
+
+  // Fallback to simulated data
   return {
-    statsData: getRealTimeStatsData(),
-    todaysStatsData: getRealTimeTodaysStatsData(),
-    statewiseBars: getRealTimeStatewiseBars(),
-    statewiseTableData: getRealTimeStatewiseTableData(),
-    timestamp: new Date().toISOString()
+    statsData: getSimulatedStatsData(),
+    todaysStatsData: getSimulatedTodaysStatsData(),
+    statewiseBars: getSimulatedStatewiseBars(),
+    statewiseTableData: getSimulatedStatewiseTableData(),
+    timestamp: new Date().toISOString(),
+    source: 'simulated'
   };
 };
 

@@ -13,7 +13,7 @@ const router = express.Router();
 // GET /api/insights - Get all real-time insights data
 router.get('/', async (req, res) => {
   try {
-    const data = getAllRealTimeData();
+    const data = await getAllRealTimeData();
     res.json(data);
   } catch (error) {
     console.error('Error fetching real-time insights data:', error);
@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
 // GET /api/insights/stats - Get stats data only
 router.get('/stats', async (req, res) => {
   try {
-    const data = getRealTimeStatsData();
+    const data = await getRealTimeStatsData();
     res.json({ statsData: data, timestamp: new Date().toISOString() });
   } catch (error) {
     console.error('Error fetching stats data:', error);
@@ -35,7 +35,7 @@ router.get('/stats', async (req, res) => {
 // GET /api/insights/todays-stats - Get today's stats only
 router.get('/todays-stats', async (req, res) => {
   try {
-    const data = getRealTimeTodaysStatsData();
+    const data = await getRealTimeTodaysStatsData();
     res.json({ todaysStatsData: data, timestamp: new Date().toISOString() });
   } catch (error) {
     console.error('Error fetching today\'s stats data:', error);
@@ -47,8 +47,8 @@ router.get('/todays-stats', async (req, res) => {
 router.get('/statewise', async (req, res) => {
   try {
     const data = {
-      statewiseBars: getRealTimeStatewiseBars(),
-      statewiseTableData: getRealTimeStatewiseTableData(),
+      statewiseBars: await getRealTimeStatewiseBars(),
+      statewiseTableData: await getRealTimeStatewiseTableData(),
       timestamp: new Date().toISOString()
     };
     res.json(data);
