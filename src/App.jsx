@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import ScrollToTop from "./components/ScrollToTop";
 
 // Core Pages
 import Navbar from "./components/Navbar";
@@ -32,8 +33,6 @@ import BloodBankInventory from "./components/login_as_bb/BloodBankInventory";
 import BloodBankAppointments from "./components/login_as_bb/BloodBankAppointments";
 import BloodBankParentHospitals from "./components/login_as_bb/BloodBankParentHospitals";
 
-// import BloodBankParentHospitals from "./components/login_as_bb/BloodBankParentHospitals"; // Uncomment if you have this file
-
 // Find Blood Page
 import FindBlood from "./components/findBlood/FindBlood";
 
@@ -41,6 +40,8 @@ export default function App() {
   return (
     <AuthProvider>
       <div className="bg-gray-100 min-h-screen flex flex-col">
+        {/* ScrollToTop ensures the page scrolls to top on route changes */}
+        <ScrollToTop />
         <Routes>
           {/* Public Donor Health Card Route (no navbar) */}
           <Route path="/donor-card/:donorId" element={<DonorHealthCard />} />
@@ -56,7 +57,6 @@ export default function App() {
           <Route path="/bloodbank/inventory" element={<BloodBankInventory />} />
           <Route path="/bloodbank/appointments" element={<BloodBankAppointments />} />
           <Route path="/bloodbank/parent-hospitals" element={<BloodBankParentHospitals />} />
-
 
           {/* Public Routes with Navbar */}
           <Route
