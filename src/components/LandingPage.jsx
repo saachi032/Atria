@@ -1,8 +1,10 @@
 "use client"
 
+
 import { useState } from "react"
 import nursePhoto from "../assets/nurseAssist.png";
 import Footer from "./Footer/Footer"; // Import the Footer component
+
 
 const bloodInfo = {
   "O-": {
@@ -55,7 +57,9 @@ const bloodInfo = {
   },
 }
 
+
 const bloodTypes = ["O-", "O+", "A-", "A+", "B-", "B+", "AB-", "AB+"]
+
 
 // Updated Blood Bank flows with two subsections
 const bloodBankFlows = [
@@ -78,6 +82,7 @@ const bloodBankFlows = [
     ],
   },
 ]
+
 
 // Tabs for How to Use Atria
 const flowchartTabs = [
@@ -108,6 +113,7 @@ const flowchartTabs = [
     flow: bloodBankFlows, // SPECIAL: this tab has two subsections
   },
 ]
+
 
 // Updated FAQ List
 const faqList = [
@@ -159,7 +165,7 @@ const faqList = [
       <ul className="list-disc list-inside space-y-1">
         <li>Eat a light meal (avoid fatty foods).</li>
         <li>Drink plenty of water.</li>
-        <li>Get a good night’s sleep.</li>
+        <li>Get a good night's sleep.</li>
       </ul>
     ),
     icon: "📋",
@@ -193,10 +199,12 @@ const faqList = [
   },
 ]
 
+
 function FAQSection() {
   const [openIdx, setOpenIdx] = useState(null)
   const [hoveredIdx, setHoveredIdx] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState("all")
+
 
   const categories = [
     { key: "all", label: "All Questions", icon: "📋" },
@@ -208,7 +216,9 @@ function FAQSection() {
     { key: "impact", label: "Impact", icon: "❤️" },
   ]
 
+
   const filteredFAQs = selectedCategory === "all" ? faqList : faqList.filter((faq) => faq.category === selectedCategory)
+
 
   return (
     <section className="max-w-4xl mx-auto py-16 px-6">
@@ -223,6 +233,7 @@ function FAQSection() {
           Get answers to common questions about blood donation and learn how you can make a difference.
         </p>
       </div>
+
 
       {/* Category Filter */}
       <div className="flex flex-wrap justify-center gap-2 mb-10 p-2 bg-gray-50 rounded-2xl">
@@ -243,6 +254,7 @@ function FAQSection() {
         ))}
       </div>
 
+
       {/* FAQ Items */}
       <div className="space-y-4">
         {filteredFAQs.map((faq, idx) => (
@@ -255,10 +267,10 @@ function FAQSection() {
             onMouseLeave={() => setHoveredIdx(null)}
           >
             <button
-              className="w-full flex justify-between items-center px-6 py-5 text-left focus:outline-none group"
+              className="w-full flex justify-between items-center px-6 py-5 text-left focus:outline-none group cursor-pointer"
               onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
               aria-expanded={openIdx === idx}
-            >
+              >
               <div className="flex items-center gap-4 flex-1">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all duration-300 transform group-hover:scale-110
@@ -287,6 +299,7 @@ function FAQSection() {
               </div>
             </button>
 
+
             <div
               className={`transition-all duration-500 ease-in-out overflow-hidden
                 ${openIdx === idx ? "max-h-96 opacity-100" : "max-h-0 opacity-0"}`}
@@ -300,6 +313,7 @@ function FAQSection() {
           </div>
         ))}
       </div>
+
 
       {/* Bottom CTA */}
       <div className="mt-12 text-center">
@@ -317,10 +331,12 @@ function FAQSection() {
   )
 }
 
+
 export default function LandingPage() {
   const [selectedType, setSelectedType] = useState("O-")
   const [activeTab, setActiveTab] = useState("Hospitals")
   const [bbSubsection, setBbSubsection] = useState("As a Donor")
+
 
   // For Blood Banks, handle sub-tab
   const renderBloodBankSection = () => (
@@ -362,8 +378,20 @@ export default function LandingPage() {
                 </div>
                 {idx !== arr.length - 1 && (
                   <div className="mx-3 md:mx-4 flex items-center">
-                    <div className="w-8 h-0.5 bg-gradient-to-r from-blue-300 to-blue-400 rounded-full"></div>
-                    <span className="text-blue-400 text-xl ml-1">→</span>
+                    <svg 
+                      className="w-12 h-6 text-blue-400 transition-all duration-300 hover:text-blue-500" 
+                      viewBox="0 0 48 24" 
+                      fill="none" 
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path 
+                        d="M0 12H44M44 12L36 4M44 12L36 20" 
+                        stroke="currentColor" 
+                        strokeWidth="2.5" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </div>
                 )}
               </div>
@@ -372,6 +400,7 @@ export default function LandingPage() {
       </div>
     </div>
   )
+
 
   return (
     <>
@@ -392,10 +421,12 @@ export default function LandingPage() {
           </div>
         </section>
 
+
         {/* Join Community Banner */}
         <section className="bg-red-100 py-4 text-center rounded-xl text-gray-900 text-base font-semibold shadow-sm mb-12 mt-8">
           Join 25,000+ Life Savers
         </section>
+
 
         {/* Blood Donation Info */}
         <section className="bg-white rounded-xl p-8 shadow border border-gray-200">
@@ -476,6 +507,7 @@ export default function LandingPage() {
           </div>
         </section>
 
+
         {/* How to Use Atria Section */}
         <section className="bg-white rounded-xl p-8 shadow border border-gray-200 overflow-hidden">
           <div className="text-center mb-12">
@@ -489,6 +521,7 @@ export default function LandingPage() {
               Simple steps to connect donors with those in need through our platform
             </p>
           </div>
+
 
           <div className="flex justify-center mb-12">
             <div className="flex bg-gray-50 p-2 rounded-2xl shadow-inner">
@@ -512,6 +545,7 @@ export default function LandingPage() {
               ))}
             </div>
           </div>
+
 
           <div className="bg-gradient-to-br from-gray-50 to-red-50 rounded-2xl p-8 border border-red-100">
             {activeTab === "Blood Banks" ? (
@@ -553,8 +587,20 @@ export default function LandingPage() {
                           </div>
                           {idx !== arr.length - 1 && (
                             <div className="mx-3 md:mx-4 flex items-center">
-                              <div className="w-8 h-0.5 bg-gradient-to-r from-red-300 to-red-400 rounded-full"></div>
-                              <span className="text-red-400 text-xl ml-1">→</span>
+                              <svg 
+                                className="w-12 h-6 text-red-400 transition-all duration-300 hover:text-red-500" 
+                                viewBox="0 0 48 24" 
+                                fill="none" 
+                                xmlns="http://www.w3.org/2000/svg"
+                              >
+                                <path 
+                                  d="M0 12H44M44 12L36 4M44 12L36 20" 
+                                  stroke="currentColor" 
+                                  strokeWidth="2.5" 
+                                  strokeLinecap="round" 
+                                  strokeLinejoin="round"
+                                />
+                              </svg>
                             </div>
                           )}
                         </div>
@@ -582,8 +628,20 @@ export default function LandingPage() {
                         </div>
                         {idx !== arr.length - 1 && (
                           <div className="mx-3 md:mx-4 flex items-center">
-                            <div className="w-8 h-0.5 bg-gradient-to-r from-red-300 to-red-400 rounded-full"></div>
-                            <span className="text-red-400 text-xl ml-1">→</span>
+                            <svg 
+                              className="w-12 h-6 text-red-400 transition-all duration-300 hover:text-red-500" 
+                              viewBox="0 0 48 24" 
+                              fill="none" 
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path 
+                                d="M0 12H44M44 12L36 4M44 12L36 20" 
+                                stroke="currentColor" 
+                                strokeWidth="2.5" 
+                                strokeLinecap="round" 
+                                strokeLinejoin="round"
+                              />
+                            </svg>
                           </div>
                         )}
                       </div>
@@ -593,6 +651,7 @@ export default function LandingPage() {
             )}
           </div>
         </section>
+
 
         {/* Impact Section */}
         <section className="bg-white rounded-xl p-8 shadow border border-gray-200">
@@ -658,6 +717,7 @@ export default function LandingPage() {
           </div>
         </section>
 
+
         {/* Why Choose Section */}
         <section className="max-w-4xl mx-auto text-center px-6 pb-12">
           <h3 className="text-xl font-bold mb-4">Why Choose Atria?</h3>
@@ -666,6 +726,7 @@ export default function LandingPage() {
             designed with your safety and convenience in mind, ensuring that every donation makes a difference.
           </p>
         </section>
+
 
         {/* FAQ Section */}
         <FAQSection />
