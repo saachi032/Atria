@@ -4,6 +4,8 @@
 import { useState } from "react"
 import nursePhoto from "../assets/nurseAssist.png";
 import Footer from "./Footer/Footer"; // Import the Footer component
+import { useNavigate } from "react-router-dom";
+
 
 
 const bloodInfo = {
@@ -201,6 +203,7 @@ const faqList = [
 
 
 function FAQSection() {
+  const navigate = useNavigate();
   const [openIdx, setOpenIdx] = useState(null)
   const [hoveredIdx, setHoveredIdx] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState("all")
@@ -242,10 +245,9 @@ function FAQSection() {
             key={category.key}
             onClick={() => setSelectedCategory(category.key)}
             className={`px-4 py-2 rounded-xl font-medium transition-all duration-300 text-sm flex items-center gap-2 transform hover:scale-105
-              ${
-                selectedCategory === category.key
-                  ? "bg-red-500 text-white shadow-lg scale-105"
-                  : "bg-white text-gray-700 hover:bg-red-50 hover:text-red-600 shadow-sm"
+              ${selectedCategory === category.key
+                ? "bg-red-500 text-white shadow-lg scale-105"
+                : "bg-white text-gray-700 hover:bg-red-50 hover:text-red-600 shadow-sm"
               }`}
           >
             <span>{category.icon}</span>
@@ -270,14 +272,13 @@ function FAQSection() {
               className="w-full flex justify-between items-center px-6 py-5 text-left focus:outline-none group cursor-pointer"
               onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
               aria-expanded={openIdx === idx}
-              >
+            >
               <div className="flex items-center gap-4 flex-1">
                 <div
                   className={`w-12 h-12 rounded-full flex items-center justify-center text-xl transition-all duration-300 transform group-hover:scale-110
-                    ${
-                      openIdx === idx
-                        ? "bg-red-500 text-white shadow-lg"
-                        : "bg-red-50 text-red-500 group-hover:bg-red-100"
+                    ${openIdx === idx
+                      ? "bg-red-500 text-white shadow-lg"
+                      : "bg-red-50 text-red-500 group-hover:bg-red-100"
                     }`}
                 >
                   {faq.icon}
@@ -322,7 +323,11 @@ function FAQSection() {
           <p className="text-gray-600 mb-4">
             Our team is here to help you understand the donation process and address any concerns.
           </p>
-          <button className="bg-red-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl">
+          <button
+          
+            className="bg-red-500 text-white px-6 py-3 rounded-xl font-semibold hover:bg-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+            onClick={() => navigate("/support")}
+          >
             Contact Support
           </button>
         </div>
@@ -348,10 +353,9 @@ export default function LandingPage() {
               key={sec.section}
               onClick={() => setBbSubsection(sec.section)}
               className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 text-xs md:text-sm transform hover:scale-105
-                ${
-                  bbSubsection === sec.section
-                    ? "bg-blue-500 text-white shadow-md scale-105"
-                    : "bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+                ${bbSubsection === sec.section
+                  ? "bg-blue-500 text-white shadow-md scale-105"
+                  : "bg-transparent text-gray-700 hover:bg-blue-50 hover:text-blue-600"
                 }`}
             >
               {sec.section}
@@ -378,17 +382,17 @@ export default function LandingPage() {
                 </div>
                 {idx !== arr.length - 1 && (
                   <div className="mx-3 md:mx-4 flex items-center">
-                    <svg 
-                      className="w-12 h-6 text-blue-400 transition-all duration-300 hover:text-blue-500" 
-                      viewBox="0 0 48 24" 
-                      fill="none" 
+                    <svg
+                      className="w-12 h-6 text-blue-400 transition-all duration-300 hover:text-blue-500"
+                      viewBox="0 0 48 24"
+                      fill="none"
                       xmlns="http://www.w3.org/2000/svg"
                     >
-                      <path 
-                        d="M0 12H44M44 12L36 4M44 12L36 20" 
-                        stroke="currentColor" 
-                        strokeWidth="2.5" 
-                        strokeLinecap="round" 
+                      <path
+                        d="M0 12H44M44 12L36 4M44 12L36 20"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
                         strokeLinejoin="round"
                       />
                     </svg>
@@ -530,10 +534,9 @@ export default function LandingPage() {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key)}
                   className={`px-6 py-3 rounded-xl font-semibold transition-all duration-300 text-sm md:text-base transform hover:scale-105 relative overflow-hidden
-                    ${
-                      activeTab === tab.key
-                        ? "bg-red-500 text-white shadow-lg scale-105"
-                        : "bg-transparent text-gray-700 hover:bg-red-50 hover:text-red-600"
+                    ${activeTab === tab.key
+                      ? "bg-red-500 text-white shadow-lg scale-105"
+                      : "bg-transparent text-gray-700 hover:bg-red-50 hover:text-red-600"
                     }`}
                   style={{ minWidth: "120px" }}
                 >
@@ -557,10 +560,9 @@ export default function LandingPage() {
                         key={sec.section}
                         onClick={() => setBbSubsection(sec.section)}
                         className={`px-4 py-2 rounded-lg font-semibold transition-all duration-300 text-xs md:text-sm transform hover:scale-105
-                          ${
-                            bbSubsection === sec.section
-                              ? "bg-red-500 text-white shadow-md scale-105"
-                              : "bg-transparent text-gray-700 hover:bg-red-50 hover:text-red-600"
+                          ${bbSubsection === sec.section
+                            ? "bg-red-500 text-white shadow-md scale-105"
+                            : "bg-transparent text-gray-700 hover:bg-red-50 hover:text-red-600"
                           }`}
                       >
                         {sec.section}
@@ -587,17 +589,17 @@ export default function LandingPage() {
                           </div>
                           {idx !== arr.length - 1 && (
                             <div className="mx-3 md:mx-4 flex items-center">
-                              <svg 
-                                className="w-12 h-6 text-red-400 transition-all duration-300 hover:text-red-500" 
-                                viewBox="0 0 48 24" 
-                                fill="none" 
+                              <svg
+                                className="w-12 h-6 text-red-400 transition-all duration-300 hover:text-red-500"
+                                viewBox="0 0 48 24"
+                                fill="none"
                                 xmlns="http://www.w3.org/2000/svg"
                               >
-                                <path 
-                                  d="M0 12H44M44 12L36 4M44 12L36 20" 
-                                  stroke="currentColor" 
-                                  strokeWidth="2.5" 
-                                  strokeLinecap="round" 
+                                <path
+                                  d="M0 12H44M44 12L36 4M44 12L36 20"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
                                   strokeLinejoin="round"
                                 />
                               </svg>
@@ -628,17 +630,17 @@ export default function LandingPage() {
                         </div>
                         {idx !== arr.length - 1 && (
                           <div className="mx-3 md:mx-4 flex items-center">
-                            <svg 
-                              className="w-12 h-6 text-red-400 transition-all duration-300 hover:text-red-500" 
-                              viewBox="0 0 48 24" 
-                              fill="none" 
+                            <svg
+                              className="w-12 h-6 text-red-400 transition-all duration-300 hover:text-red-500"
+                              viewBox="0 0 48 24"
+                              fill="none"
                               xmlns="http://www.w3.org/2000/svg"
                             >
-                              <path 
-                                d="M0 12H44M44 12L36 4M44 12L36 20" 
-                                stroke="currentColor" 
-                                strokeWidth="2.5" 
-                                strokeLinecap="round" 
+                              <path
+                                d="M0 12H44M44 12L36 4M44 12L36 20"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
                                 strokeLinejoin="round"
                               />
                             </svg>

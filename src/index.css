@@ -18,3 +18,8 @@
 .animate-fade-in-fast {
     animation: fadeIn 0.2s ease-out forwards;
 }
+
+@keyframes drip-blood {
+  0% { height: 4px; opacity: 1; }
+  100% { height: 25px; opacity: 0.6; }
+}

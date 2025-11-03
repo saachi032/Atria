@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import ScrollToTop from "./components/ScrollToTop";
+import SupportPage from "./components/SupportPage"; // <-- Add this import!
 
 // Core Pages
 import Navbar from "./components/Navbar";
@@ -86,6 +87,9 @@ export default function App() {
                   {/* Blood Bank Auth Routes */}
                   <Route path="/login/bloodbank" element={<BloodBankLogin />} />
                   <Route path="/register/bloodbank" element={<BloodBankRegister />} />
+
+                  {/* Vampire Support Route */}
+                  <Route path="/support" element={<SupportPage />} />
                 </Routes>
               </>
             }
