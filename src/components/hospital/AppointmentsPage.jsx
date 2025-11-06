@@ -286,11 +286,35 @@ export default function AppointmentsPage() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border p-4">
                             <DayPicker
-                                mode="single"
-                                selected={selectedCalendarDate}
-                                onSelect={setSelectedCalendarDate}
-                                modifiers={{ highlighted: highlightedDays }}
-                                modifiersClassNames={{ highlighted: 'bg-red-100 text-red-800 rounded-full' }}/>
+  mode="single"
+  selected={selectedCalendarDate}
+  onSelect={setSelectedCalendarDate}
+  modifiers={{ highlighted: highlightedDays }}
+  modifiersClassNames={{ highlighted: 'bg-red-100 text-red-800 rounded-full' }}
+  components={{
+    DayContent: (props) => {
+      const dateStr = format(props.date, 'yyyy-MM-dd');
+      const count = appointmentsByDate.get(dateStr)?.length || 0;
+
+      return (
+        <div
+          className="relative flex items-center justify-center w-full h-full"
+          title={count > 0 ? `${count} appointment${count > 1 ? 's' : ''}` : ''}
+        >
+          {props.children}
+
+          {/* Small Count Badge */}
+          {count > 0 && (
+            <span className="absolute bottom-0 right-0 text-[10px] px-1 py-[1px] rounded bg-red-600 text-white">
+              {count}
+            </span>
+          )}
+        </div>
+      );
+    }
+  }}
+/>
+
                         </div>
                         <div className="bg-white rounded-xl shadow-sm border p-6">
                             <h3 className="text-lg font-semibold text-gray-800 mb-4">Appointments for {format(selectedCalendarDate, 'PPP')}</h3>
