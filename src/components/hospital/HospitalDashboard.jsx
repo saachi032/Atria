@@ -169,8 +169,8 @@ const SendIcon = (props) => (
   </svg>
 )
 
-// --- Mock Data ---
-const inventoryData = [
+// --- Inventory source: localStorage fallback to sample ---
+const fallbackInventorySummary = [
   { type: "A+", units: 75 },
   { type: "A-", units: 9 },
   { type: "B+", units: 60 },
@@ -179,10 +179,6 @@ const inventoryData = [
   { type: "O-", units: 45 },
   { type: "AB+", units: 35 },
   { type: "AB-", units: 8 },
-]
-const pendingRequests = [
-  { id: "R-7284", patient: "John Doe", type: "A+", units: 2, date: "2024-10-28" },
-  { id: "R-7282", patient: "Robert Brown", type: "B+", units: 3, date: "2024-10-27" },
 ]
 const weeklyChartData = [
   { day: "Mon", donations: 15, requests: 12 },
@@ -196,7 +192,15 @@ const weeklyChartData = [
 
 const LOW_STOCK_THRESHOLD = 10
 const STABLE_STOCK_THRESHOLD = 40
-const lowStockAlerts = inventoryData.filter((item) => item.units < LOW_STOCK_THRESHOLD)
+const getSummaryFromStoredInventory = (stored) => {
+  // stored is array of units entries with type and units
+  const map = new Map()
+  for (const item of stored) {
+    const prev = map.get(item.type) || 0
+    map.set(item.type, prev + (Number(item.units) || 0))
+  }
+  return Array.from(map.entries()).map(([type, units]) => ({ type, units }))
+}
 
 // --- Chart Helpers ---
 const getBloodStatusColor = (units) => {
@@ -225,15 +229,14 @@ export default function HospitalDashboard() {
   const [showCreateRequest, setShowCreateRequest] = useState(false)
   const [showRecordDonation, setShowRecordDonation] = useState(false)
   const [showDonorAlert, setShowDonorAlert] = useState(false)
-  const [recentRequests, setRecentRequests] = useState([])
+  const [inventorySummary, setInventorySummary] = useState(fallbackInventorySummary)
+  const [scheduledCount, setScheduledCount] = useState(0)
 
-  const totalUnits = inventoryData.reduce((sum, item) => sum + item.units, 0)
-  const totalPendingRequests = pendingRequests.length
-  const totalScheduledDonations = 32
-  const totalAlerts = lowStockAlerts.length
+  const totalUnits = inventorySummary.reduce((sum, item) => sum + item.units, 0)
+  const totalScheduledDonations = scheduledCount
+  const totalAlerts = inventorySummary.filter((i) => i.units < LOW_STOCK_THRESHOLD).length
 
   const animatedTotalUnits = useAnimatedCounter(totalUnits)
-  const animatedPendingRequests = useAnimatedCounter(totalPendingRequests)
   const animatedScheduledDonations = useAnimatedCounter(totalScheduledDonations)
   const animatedAlerts = useAnimatedCounter(totalAlerts)
 
@@ -244,13 +247,6 @@ export default function HospitalDashboard() {
       icon: <DropletsIcon className="w-8 h-8" />,
       color: "blue",
       tooltip: "Total units available.",
-    },
-    {
-      title: "Pending Requests",
-      value: animatedPendingRequests,
-      icon: <BellIcon className="w-8 h-8" />,
-      color: "yellow",
-      tooltip: "Requests awaiting fulfillment.",
     },
     {
       title: "Scheduled Donations",
@@ -278,21 +274,30 @@ export default function HospitalDashboard() {
     return colors[color] || "bg-gray-100 text-gray-600"
   }
 
-  // Load recent requests for notifications
+  // Load inventory summary from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('hospital_inventory')
+      if (raw) {
+        const list = JSON.parse(raw)
+        setInventorySummary(getSummaryFromStoredInventory(list))
+      }
+    } catch {}
+  }, [])
+
+  // Load scheduled appointments count for hospital
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (!token) return
     const load = async () => {
       try {
-        const res = await fetch('/api/requests', { headers: { Authorization: `Bearer ${token}` } })
+        const res = await fetch('/api/appointments/hospital/upcoming', { headers: { Authorization: `Bearer ${token}` } })
         if (!res.ok) return
-        const data = await res.json().catch(() => null)
-        if (data && data.success && Array.isArray(data.requests)) {
-          setRecentRequests(data.requests.slice(0, 5))
+        const data = await res.json()
+        if (data && data.success && Array.isArray(data.appointments)) {
+          setScheduledCount(data.appointments.length)
         }
-      } catch {
-        // ignore
-      }
+      } catch {}
     }
     load()
   }, [])
@@ -312,9 +317,9 @@ export default function HospitalDashboard() {
               className="relative p-2 rounded-full hover:bg-gray-200"
             >
               <BellIcon className="w-6 h-6 text-gray-600" />
-              {totalPendingRequests + totalAlerts > 0 && (
+              {totalAlerts > 0 && (
                 <span className="absolute top-0 right-0 h-4 w-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                  {totalPendingRequests + totalAlerts}
+                  {totalAlerts}
                 </span>
               )}
             </button>
@@ -322,15 +327,7 @@ export default function HospitalDashboard() {
               <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border z-10 animate-fade-in-fast">
                 <div className="p-4 font-semibold border-b">Notifications</div>
                 <div className="py-2 max-h-96 overflow-y-auto">
-                  {(recentRequests.length > 0 ? recentRequests : pendingRequests).map((req) => (
-                    <div key={req._id || req.id} className="px-4 py-2 hover:bg-gray-100">
-                      <p className="text-sm font-medium text-gray-800">
-                        New Request: {req.units} units of {req.bloodType || req.type}
-                      </p>
-                      <p className="text-xs text-gray-500">For patient {req.patientName || req.patient}</p>
-                    </div>
-                  ))}
-                  {lowStockAlerts.map((alert) => (
+                  {inventorySummary.filter(i=>i.units<LOW_STOCK_THRESHOLD).map((alert) => (
                     <div key={alert.type} className="px-4 py-2 hover:bg-gray-100">
                       <p className="text-sm font-medium text-red-600">Low Stock: {alert.type}</p>
                       <p className="text-xs text-gray-500">{alert.units} units remaining</p>
@@ -387,7 +384,7 @@ export default function HospitalDashboard() {
                   <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
                     {/* ✅ Animation disabled */}
                     <Pie
-                      data={inventoryData}
+                      data={inventorySummary}
                       dataKey="units"
                       nameKey="type"
                       cx="50%"
@@ -398,7 +395,7 @@ export default function HospitalDashboard() {
                       label={renderCustomizedLabel}
                       isAnimationActive={false}
                     >
-                      {inventoryData.map((entry) => (
+                      {inventorySummary.map((entry) => (
                         <Cell key={`cell-${entry.type}`} fill={getBloodStatusColor(entry.units)} />
                       ))}
                     </Pie>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import Sidebar from "./Sidebar"
 import toast, { Toaster } from "react-hot-toast"
 import Papa from "papaparse"
@@ -149,7 +149,7 @@ const LOW_STOCK_THRESHOLD = 20
 const EXPIRY_SOON_THRESHOLD_DAYS = 7
 
 const getRowStyle = (item) => {
-  const today = new Date("2025-10-08")
+  const today = new Date()
   const expiry = new Date(item.expiryDate)
   const diffTime = expiry - today
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
@@ -162,7 +162,13 @@ const getRowStyle = (item) => {
 }
 
 export default function Inventory() {
-  const [inventory, setInventory] = useState(initialInventoryData)
+  const [inventory, setInventory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('hospital_inventory')
+      if (saved) return JSON.parse(saved)
+    } catch {}
+    return initialInventoryData
+  })
   const [filterType, setFilterType] = useState("")
   const [sort, setSort] = useState({ key: "type", order: "asc" })
   const [isAddModalOpen, setAddModalOpen] = useState(false)
@@ -203,12 +209,12 @@ export default function Inventory() {
   const totalPages = Math.ceil(filteredAndSortedInventory.length / itemsPerPage)
 
   // Summary Card Data
-  const totalUnits = inventory.reduce((sum, item) => sum + item.units, 0)
+  const totalUnits = inventory.reduce((sum, item) => sum + Number(item.units || 0), 0)
   const lowStockCount = inventory.filter(
-    (item) => item.units < LOW_STOCK_THRESHOLD && new Date(item.expiryDate) > new Date("2025-10-08"),
+    (item) => item.units < LOW_STOCK_THRESHOLD && new Date(item.expiryDate) > new Date(),
   ).length
   const expiringSoonCount = inventory.filter((item) => {
-    const diffDays = Math.ceil((new Date(item.expiryDate) - new Date("2025-10-08")) / (1000 * 60 * 60 * 24))
+    const diffDays = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24))
     return diffDays >= 0 && diffDays <= EXPIRY_SOON_THRESHOLD_DAYS
   }).length
 
@@ -241,21 +247,31 @@ export default function Inventory() {
   }
 
   const confirmDelete = () => {
-    setInventory((prev) => prev.filter((item) => item.id !== currentItem.id))
+    setInventory((prev) => {
+      const next = prev.filter((item) => item.id !== currentItem.id)
+      try { localStorage.setItem('hospital_inventory', JSON.stringify(next)) } catch {}
+      return next
+    })
     setDeleteModalOpen(false)
     toast.success(`Stock ID ${currentItem.id} removed.`)
   }
 
   const handleAddStock = (newStockData) => {
     const newId = Math.max(...inventory.map((item) => item.id), 0) + 1
-    const newStock = {
-      id: newId,
-      ...newStockData,
-    }
-    setInventory((prev) => [...prev, newStock])
+    const newStock = { id: newId, ...newStockData, units: Number(newStockData.units) }
+    setInventory((prev) => {
+      const next = [...prev, newStock]
+      try { localStorage.setItem('hospital_inventory', JSON.stringify(next)) } catch {}
+      return next
+    })
     setAddModalOpen(false)
     toast.success(`Stock added successfully! ID: ${newId}`)
   }
+
+  // Persist on change (for edits via future modals)
+  useEffect(() => {
+    try { localStorage.setItem('hospital_inventory', JSON.stringify(inventory)) } catch {}
+  }, [inventory])
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans">

@@ -1,295 +1,235 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { DayPicker } from 'react-day-picker';
-import { format } from 'date-fns';
-import 'react-day-picker/dist/style.css';
+import { useMemo, useState, useEffect } from 'react';
 import toast, { Toaster } from 'react-hot-toast';
 import Papa from 'papaparse';
 import BloodBankSidebar from './BloodBankSidebar';
+import AddStockModal from '../modals/AddStockModal';
 
 // --- MOCK DATA ---
-const initialAppointments = [
-  { id: "BB-A101", donorName: "Sakshi Mehra", donorEmail: "sakshi.m@example.com", donorPhone: "9823458761", date: "2025-10-18", time: "09:00", bloodType: "O+", donationType: "Whole Blood", status: "Upcoming", notes: "" },
-  { id: "BB-A102", donorName: "Ajay Singh", donorEmail: "ajay.s@example.com", donorPhone: "9811278761", date: "2025-10-20", time: "13:00", bloodType: "A-", donationType: "Plasma", status: "Upcoming", notes: "" },
-  { id: "BB-A103", donorName: "Rohit Jain", donorEmail: "rohit.j@example.com", donorPhone: "9123081279", date: "2025-10-23", time: "16:00", bloodType: "B+", donationType: "Platelets", status: "Upcoming", notes: "Prefers weekend slots" },
-  { id: "BB-A104", donorName: "Zara Patel", donorEmail: "zara.p@example.com", donorPhone: "9872341689", date: "2025-10-05", time: "10:30", bloodType: "AB+", donationType: "Major Donation", status: "Completed", notes: "" },
-  { id: "BB-A105", donorName: "Dipen Khatri", donorEmail: "dipen.k@example.com", donorPhone: "9819253450", date: "2025-10-07", time: "15:45", bloodType: "O-", donationType: "Platelets", status: "Completed", notes: "" },
-  { id: "BB-A106", donorName: "Rupal Bhatt", donorEmail: "rupal.b@example.com", donorPhone: "9833221188", date: "2025-10-04", time: "11:15", bloodType: "A+", donationType: "Whole Blood", status: "Cancelled", notes: "Shifted city recently." },
+const initialInventoryData = [
+  { id: 101, type: 'O+', units: 80, collectionDate: '2025-10-01', expiryDate: '2025-11-08', location: 'Rack 1', donorId: 'BB-1', notes: '' },
+  { id: 102, type: 'A-', units: 15, collectionDate: '2025-09-20', expiryDate: '2025-10-20', location: 'Rack 2', donorId: 'BB-2', notes: 'Priority' },
+  { id: 103, type: 'AB+', units: 22, collectionDate: '2025-10-05', expiryDate: '2025-11-15', location: 'Rack 3', donorId: 'BB-3', notes: '' },
 ];
 
-const SearchIcon = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>);
-const ListIcon = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>);
-const CalendarIcon = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>);
-const DownloadIcon = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>);
-const EyeIcon = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" /><circle cx="12" cy="12" r="3" /></svg>);
+const LOW_STOCK_THRESHOLD = 20;
+const EXPIRY_SOON_THRESHOLD_DAYS = 7;
 
-const ITEMS_PER_PAGE = 10;
+const PlusIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <line x1="12" y1="5" x2="12" y2="19"></line>
+    <line x1="5" y1="12" x2="19" y2="12"></line>
+  </svg>
+);
+const DownloadIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+    <polyline points="7 10 12 15 17 10"></polyline>
+    <line x1="12" y1="15" x2="12" y2="3"></line>
+  </svg>
+);
+const EditIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+  </svg>
+);
+const TrashIcon = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    <line x1="10" y1="11" x2="10" y2="17"></line>
+    <line x1="14" y1="11" x2="14" y2="17"></line>
+  </svg>
+);
 
-export default function BloodBankAppointments() {
-  const [appointments, setAppointments] = useState(initialAppointments);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [bloodTypeFilter, setBloodTypeFilter] = useState('All');
-  const [view, setView] = useState('list');
-  const [activeTab, setActiveTab] = useState('upcoming');
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
+const getRowStyle = (item) => {
+  const today = new Date();
+  const expiry = new Date(item.expiryDate);
+  const diffDays = Math.ceil((expiry - today) / (1000 * 60 * 60 * 24));
+  if (diffDays < 0) return { style: 'bg-red-100 opacity-75', tooltip: 'Expired' };
+  if (diffDays <= EXPIRY_SOON_THRESHOLD_DAYS) return { style: 'bg-yellow-100', tooltip: `Expires in ${diffDays} day(s)` };
+  if (item.units < LOW_STOCK_THRESHOLD) return { style: 'bg-red-50', tooltip: 'Low stock' };
+  return { style: '', tooltip: `Expires in ${diffDays} day(s)` };
+};
+
+export default function BloodBankInventory() {
+  const [inventory, setInventory] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bloodbank_inventory');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return initialInventoryData;
+  });
+  const [filterType, setFilterType] = useState('');
+  const [sort, setSort] = useState({ key: 'type', order: 'asc' });
+  const [isAddModalOpen, setAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [currentItem, setCurrentItem] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
-  const filteredAppointments = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return appointments
-      .filter(appt => {
-        const apptDate = new Date(appt.date);
-        const matchesTab = activeTab === 'upcoming'
-          ? apptDate >= today && appt.status === 'Upcoming'
-          : apptDate < today || ['Completed', 'Cancelled'].includes(appt.status);
-        const matchesSearch = appt.donorName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          appt.id.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesBloodType = bloodTypeFilter === 'All' || appt.bloodType === bloodTypeFilter;
-        return matchesTab && matchesSearch && matchesBloodType;
-      })
-      .sort((a, b) => activeTab === 'upcoming'
-        ? new Date(a.date) - new Date(b.date)
-        : new Date(b.date) - new Date(a.date));
-  }, [appointments, searchTerm, bloodTypeFilter, activeTab]);
-
-  useEffect(() => { setCurrentPage(1); }, [searchTerm, bloodTypeFilter, activeTab]);
-  const totalPages = Math.ceil(filteredAppointments.length / ITEMS_PER_PAGE);
-  const paginatedAppointments = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredAppointments.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredAppointments, currentPage]);
-
-  const { upcomingCount, pastCount, totalCount } = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return appointments.reduce((counts, appt) => {
-      const apptDate = new Date(appt.date);
-      if (apptDate >= today && appt.status === 'Upcoming') {
-        counts.upcomingCount++;
-      } else {
-        counts.pastCount++;
+  const filteredAndSortedInventory = useMemo(() => {
+    let result = [...inventory];
+    if (filterType) result = result.filter((item) => item.type === filterType);
+    result.sort((a, b) => {
+      let valA = a[sort.key] || '';
+      let valB = b[sort.key] || '';
+      if (sort.key === 'expiryDate') {
+        valA = new Date(valA);
+        valB = new Date(valB);
       }
-      counts.totalCount++;
-      return counts;
-    }, { upcomingCount: 0, pastCount: 0, totalCount: 0 });
-  }, [appointments]);
-
-  const appointmentsByDate = useMemo(() => {
-    const groups = new Map();
-    appointments.forEach(appt => {
-      const date = format(new Date(appt.date), 'yyyy-MM-dd');
-      if (!groups.has(date)) groups.set(date, []);
-      groups.get(date).push(appt);
+      if (valA < valB) return sort.order === 'asc' ? -1 : 1;
+      if (valA > valB) return sort.order === 'asc' ? 1 : -1;
+      return 0;
     });
-    return groups;
-  }, [appointments]);
+    return result;
+  }, [inventory, filterType, sort]);
 
-  const highlightedDays = Array.from(appointmentsByDate.keys()).map(dateStr => new Date(dateStr));
-  const appointmentsForSelectedDay = appointmentsByDate.get(format(selectedCalendarDate, 'yyyy-MM-dd')) || [];
+  const paginatedInventory = filteredAndSortedInventory.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filteredAndSortedInventory.length / itemsPerPage);
 
-  const handleViewDetails = (appt) => {
-    setSelectedAppointment(appt);
-    setModalOpen(true);
+  const totalUnits = inventory.reduce((sum, item) => sum + Number(item.units || 0), 0);
+  const lowStockCount = inventory.filter((item) => item.units < LOW_STOCK_THRESHOLD && new Date(item.expiryDate) > new Date()).length;
+  const expiringSoonCount = inventory.filter((item) => {
+    const diffDays = Math.ceil((new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24));
+    return diffDays >= 0 && diffDays <= EXPIRY_SOON_THRESHOLD_DAYS;
+  }).length;
+
+  const handleSort = (key) => {
+    setSort((prev) => ({ key, order: prev.key === key && prev.order === 'asc' ? 'desc' : 'asc' }));
   };
 
-  const handleExport = () => {
-    const csv = Papa.unparse(filteredAppointments);
+  const handleDownload = () => {
+    const csv = Papa.unparse(filteredAndSortedInventory);
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
+    const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `appointments_report_${activeTab}_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `bb_inventory_report_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    toast.success("Report downloaded successfully!");
+    toast.success('Report downloaded successfully!');
   };
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'Upcoming': return 'bg-blue-100 text-blue-800';
-      case 'Completed': return 'bg-green-100 text-green-800';
-      case 'Cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const handleDeleteClick = (item) => { setCurrentItem(item); setDeleteModalOpen(true); };
+  const confirmDelete = () => {
+    setInventory((prev) => {
+      const next = prev.filter((i) => i.id !== currentItem.id);
+      try { localStorage.setItem('bloodbank_inventory', JSON.stringify(next)); } catch {}
+      return next;
+    });
+    setDeleteModalOpen(false);
+    toast.success(`Stock ID ${currentItem.id} removed.`);
   };
+
+  const handleAddStock = (newStockData) => {
+    const newId = Math.max(...inventory.map((item) => item.id), 0) + 1;
+    const newStock = { id: newId, ...newStockData, units: Number(newStockData.units) };
+    setInventory((prev) => {
+      const next = [...prev, newStock];
+      try { localStorage.setItem('bloodbank_inventory', JSON.stringify(next)); } catch {}
+      return next;
+    });
+    setAddModalOpen(false);
+    toast.success(`Stock added successfully! ID: ${newId}`);
+  };
+
+  useEffect(() => {
+    try { localStorage.setItem('bloodbank_inventory', JSON.stringify(inventory)); } catch {}
+  }, [inventory]);
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans">
       <Toaster position="top-right" />
       <BloodBankSidebar />
       <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-800">Manage Appointments</h2>
-          <p className="text-gray-500 mt-1">View and manage blood bank donation appointments.</p>
+        <header className="flex justify-between items-center mb-6">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-800">Blood Bank Inventory</h2>
+            <p className="text-gray-500 mt-1">Track and manage available units.</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <button onClick={handleDownload} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border rounded-lg shadow-sm hover:bg-gray-50">
+              <DownloadIcon className="w-4 h-4" /> Download Report
+            </button>
+            <button onClick={() => setAddModalOpen(true)} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg shadow-sm hover:bg-red-700">
+              <PlusIcon className="w-4 h-4" /> Add New Stock
+            </button>
+          </div>
         </header>
 
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <div className="p-4 bg-white rounded-lg shadow-sm border"><p className="text-sm text-gray-500">Total Appointments</p><p className="text-2xl font-bold text-gray-800">{totalCount}</p></div>
-          <div className="p-4 bg-white rounded-lg shadow-sm border"><p className="text-sm text-gray-500">Upcoming Appointments</p><p className="text-2xl font-bold text-gray-800">{upcomingCount}</p></div>
-          <div className="p-4 bg-white rounded-lg shadow-sm border"><p className="text-sm text-gray-500">Past Appointments</p><p className="text-2xl font-bold text-gray-800">{pastCount}</p></div>
+          <div className="p-4 bg-white rounded-lg shadow-sm border"><p className="text-sm text-gray-500">Total Units Available</p><p className="text-2xl font-bold text-gray-800">{totalUnits}</p></div>
+          <div className="p-4 bg-white rounded-lg shadow-sm border"><p className="text-sm text-gray-500">Low Stock Types</p><p className="text-2xl font-bold text-red-600">{lowStockCount}</p></div>
+          <div className="p-4 bg-white rounded-lg shadow-sm border"><p className="text-sm text-gray-500">Soon Expiring Units</p><p className="text-2xl font-bold text-yellow-600">{expiringSoonCount}</p></div>
         </div>
 
-        {/* Search, Filters, and View Toggles */}
-        <div className="mb-4 p-4 bg-white rounded-lg shadow-sm border">
-          <div className="flex justify-between items-center mb-4">
-            <div className="relative flex-grow max-w-sm">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input type="text" placeholder="Search by donor name or ID..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none"
-                value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-            </div>
-            <div className="flex items-center gap-4">
-              <select value={bloodTypeFilter} onChange={(e) => setBloodTypeFilter(e.target.value)}
-                className="border border-gray-200 rounded-lg py-2 px-3 focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none">
-                <option value="All">All Blood Types</option>
-                {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border rounded-lg shadow-sm hover:bg-gray-50">
-                <DownloadIcon className="w-4 h-4" /> Export
-              </button>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center border-t pt-4">
-            {/* Main Tabs */}
-            <div className="flex items-center border border-gray-200 rounded-lg p-1 bg-gray-50">
-              <button onClick={() => setActiveTab('upcoming')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'upcoming' ? 'bg-red-600 text-white shadow' : 'text-gray-600 hover:bg-gray-200'}`}>Upcoming</button>
-              <button onClick={() => setActiveTab('past')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'past' ? 'bg-red-600 text-white shadow' : 'text-gray-600 hover:bg-gray-200'}`}>Past</button>
-            </div>
-            {/* View Toggles */}
-            <div className="flex items-center border border-gray-200 rounded-lg p-1 bg-white">
-              <button onClick={() => setView('list')} className={`px-3 py-1 rounded-md text-sm font-medium ${view === 'list' ? 'bg-gray-700 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-                <ListIcon className="w-5 h-5 inline-block mr-1" /> List
-              </button>
-              <button onClick={() => setView('calendar')} className={`px-3 py-1 rounded-md text-sm font-medium ${view === 'calendar' ? 'bg-gray-700 text-white' : 'text-gray-600 hover:bg-gray-100'}`}>
-                <CalendarIcon className="w-5 h-5 inline-block mr-1" /> Calendar
-              </button>
-            </div>
-          </div>
+        <div className="mb-4 p-4 bg-white rounded-lg shadow-sm border flex items-center gap-4">
+          <select value={filterType} onChange={(e) => setFilterType(e.target.value)} className="text-sm border-gray-300 rounded-md">
+            <option value="">All Blood Types</option>
+            {['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map((t) => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
         </div>
 
-        {/* Main Content: Table or Calendar */}
-        {view === 'list' ? (
-          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="border-b bg-gray-50">
-                  <tr className="[&>th]:p-4 [&>th]:text-sm [&>th]:font-semibold [&>th]:text-gray-600">
-                    <th>Donor Name</th><th>Date</th><th>Time</th><th>Blood Type</th><th>Donation Type</th><th>Status</th><th className="text-center">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedAppointments.map(appt => (
-                    <tr key={appt.id} className="border-b hover:bg-gray-50">
-                      <td className="p-4 font-medium text-gray-800">{appt.donorName}</td>
-                      <td className="p-4">{format(new Date(appt.date), 'dd-MM-yyyy')}</td>
-                      <td className="p-4">{appt.time}</td>
-                      <td className="p-4 font-bold text-red-600">{appt.bloodType}</td>
-                      <td className="p-4">{appt.donationType}</td>
-                      <td className="p-4"><span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(appt.status)}`}>{appt.status}</span></td>
+        <div className="bg-white rounded-lg shadow-sm border">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead className="border-b bg-gray-50 sticky top-0">
+                <tr>
+                  <th onClick={() => handleSort('type')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer">Blood Type</th>
+                  <th onClick={() => handleSort('units')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer text-right">Units</th>
+                  <th onClick={() => handleSort('expiryDate')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer">Expiry Date</th>
+                  <th className="p-4 text-sm font-semibold text-gray-600">Location</th>
+                  <th onClick={() => handleSort('notes')} className="p-4 text-sm font-semibold text-gray-600 cursor-pointer">Notes</th>
+                  <th className="p-4 text-sm font-semibold text-gray-600 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginatedInventory.map((item) => {
+                  const { style, tooltip } = getRowStyle(item);
+                  return (
+                    <tr key={item.id} className={`border-b hover:bg-gray-100 ${style}`} title={tooltip}>
+                      <td className="p-4 text-lg font-bold text-red-600">{item.type}</td>
+                      <td className="p-4 text-sm text-gray-800 font-mono text-right">{item.units}</td>
+                      <td className="p-4 text-sm text-gray-500">{item.expiryDate}</td>
+                      <td className="p-4 text-sm text-gray-500">{item.location}</td>
+                      <td className="p-4 text-sm text-gray-500 truncate" style={{ maxWidth: '150px' }}>{item.notes}</td>
                       <td className="p-4 text-center">
-                        <button onClick={() => handleViewDetails(appt)} className="p-1 text-blue-600 hover:text-blue-800" title="View Details"><EyeIcon /></button>
+                        <button onClick={() => setCurrentItem(item)} className="p-1 text-blue-600 hover:text-blue-800 mr-2"><EditIcon /></button>
+                        <button onClick={() => handleDeleteClick(item)} className="p-1 text-red-600 hover:text-red-800"><TrashIcon /></button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {/* Pagination */}
-            <div className="p-4 flex justify-between items-center text-sm">
-              <p>Showing {paginatedAppointments.length} of {filteredAppointments.length} entries</p>
-              <div className="flex gap-1">
-                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-2 py-1 border rounded disabled:opacity-50">Prev</button>
-                {[...Array(totalPages)].map((_, i) => (
-                  <button key={i} onClick={() => setCurrentPage(i + 1)} className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-red-500 text-white' : ''}`}>{i + 1}</button>
-                ))}
-                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-2 py-1 border rounded disabled:opacity-50">Next</button>
-              </div>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="p-4 flex justify-between items-center text-sm">
+            <p>Showing {paginatedInventory.length} of {filteredAndSortedInventory.length} entries</p>
+            <div className="flex gap-1">
+              <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-2 py-1 border rounded disabled:opacity-50">Prev</button>
+              {[...Array(totalPages)].map((_, i) => (
+                <button key={i} onClick={() => setCurrentPage(i + 1)} className={`px-3 py-1 border rounded ${currentPage === i + 1 ? 'bg-red-500 text-white' : ''}`}>{i + 1}</button>
+              ))}
+              <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="px-2 py-1 border rounded disabled:opacity-50">Next</button>
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border p-4">
-              <DayPicker mode="single" selected={selectedCalendarDate} onSelect={setSelectedCalendarDate}
-                modifiers={{ highlighted: highlightedDays }}
-                modifiersClassNames={{ highlighted: 'bg-red-100 text-red-800 rounded-full' }}/>
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border p-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-4">Appointments for {format(selectedCalendarDate, 'PPP')}</h3>
-              {appointmentsForSelectedDay.length > 0 ? (
-                <ul className="space-y-3">
-                  {appointmentsForSelectedDay.map(appt => (
-                    <li key={appt.id} className="border-l-4 p-3 rounded-r-md bg-gray-50/50 border-red-400">
-                      <div className="font-medium text-gray-800">{appt.donorName} ({appt.bloodType})</div>
-                      <div className="text-sm text-gray-500">{appt.time} - {appt.donationType}</div>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-gray-500 text-center py-8">No appointments scheduled.</p>
-              )}
-            </div>
-          </div>
-        )}
+        </div>
       </main>
 
-      {/* Modal */}
-      {isModalOpen && selectedAppointment && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl transform transition-all">
-            <div className="bg-gray-50 p-4 rounded-t-lg border-b">
-              <h3 className="text-xl font-semibold text-gray-800">Appointment Details</h3>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Donor Name</p>
-                  <p className="text-base font-semibold text-gray-900">{selectedAppointment.donorName}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Appointment ID</p>
-                  <p className="text-base text-gray-900">{selectedAppointment.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Email</p>
-                  <p className="text-base text-gray-900">{selectedAppointment.donorEmail}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Phone</p>
-                  <p className="text-base text-gray-900">{selectedAppointment.donorPhone}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Date & Time</p>
-                  <p className="text-base text-gray-900">{format(new Date(selectedAppointment.date), 'PPP')} at {selectedAppointment.time}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Status</p>
-                  <p><span className={`px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(selectedAppointment.status)}`}>{selectedAppointment.status}</span></p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Blood Group</p>
-                  <p className="text-lg font-bold text-red-600">{selectedAppointment.bloodType}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Donation Type</p>
-                  <p className="text-base text-gray-900">{selectedAppointment.donationType}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-sm font-medium text-gray-500">Notes</p>
-                  <p className="text-base text-gray-900 bg-gray-50 p-2 rounded-md mt-1">{selectedAppointment.notes || 'None'}</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-4 p-4 bg-gray-50 rounded-b-lg border-t">
-              <button 
-                onClick={() => setModalOpen(false)} 
-                className="px-5 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-400">
-                Close
-              </button>
+      <AddStockModal isOpen={isAddModalOpen} onClose={() => setAddModalOpen(false)} onSubmit={handleAddStock} />
+
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-xl">
+            <h3 className="text-lg font-bold">Confirm Deletion</h3>
+            <p className="my-4">Are you sure you want to remove stock ID {currentItem?.id} ({currentItem?.type})?</p>
+            <div className="flex justify-end gap-4">
+              <button onClick={() => setDeleteModalOpen(false)} className="px-4 py-2 bg-gray-200 rounded">Cancel</button>
+              <button onClick={confirmDelete} className="px-4 py-2 bg-red-600 text-white rounded">Delete</button>
             </div>
           </div>
         </div>
