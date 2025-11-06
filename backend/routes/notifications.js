@@ -133,5 +133,58 @@ router.get('/request/:requestId', requireAuth, async (req, res) => {
   }
 });
 
+// Get organization details (Hospital or Blood Bank)
+router.get('/organization/:orgId/:orgType', requireAuth, async (req, res) => {
+  try {
+    const { orgId, orgType } = req.params;
+    
+    if (orgType === 'hospital') {
+      const hospitalUser = await HospitalUser.findById(orgId);
+      if (!hospitalUser) {
+        return res.status(404).json({ success: false, msg: 'Hospital not found' });
+      }
+      
+      const hospitalDetails = {
+        name: hospitalUser.hospitalName || hospitalUser.name,
+        address: hospitalUser.address,
+        city: hospitalUser.city,
+        state: hospitalUser.state,
+        district: hospitalUser.district,
+        pincode: hospitalUser.pincode,
+        contactNumber: hospitalUser.contactNumber1 || hospitalUser.pocMobile,
+        email: hospitalUser.pocEmail || hospitalUser.email,
+        pocName: hospitalUser.pocName,
+        pocDesignation: hospitalUser.pocDesignation,
+        pocMobile: hospitalUser.pocMobile,
+        pocEmail: hospitalUser.pocEmail,
+        hospitalType: hospitalUser.hospitalType,
+        licenseNumber: hospitalUser.licenseNumber,
+        website: hospitalUser.website,
+        type: 'Hospital'
+      };
+      
+      return res.json({ success: true, organization: hospitalDetails });
+    } else if (orgType === 'bloodbank') {
+      const bloodBankUser = await BloodBankUser.findById(orgId);
+      if (!bloodBankUser) {
+        return res.status(404).json({ success: false, msg: 'Blood Bank not found' });
+      }
+      
+      const bloodBankDetails = {
+        name: bloodBankUser.name,
+        email: bloodBankUser.email,
+        type: 'Blood Bank'
+      };
+      
+      return res.json({ success: true, organization: bloodBankDetails });
+    } else {
+      return res.status(400).json({ success: false, msg: 'Invalid organization type' });
+    }
+  } catch (e) {
+    console.error('Error fetching organization details:', e);
+    return res.status(500).json({ success: false, msg: 'Server error' });
+  }
+});
+
 export default router;
 

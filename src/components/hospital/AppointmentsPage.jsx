@@ -32,20 +32,15 @@ const XIcon = (props) => (<svg {...props} xmlns="http://www.w3.org/2000/svg" wid
 
 export default function AppointmentsPage() {
     const [appointments, setAppointments] = useState(initialAppointments);
-    const [appointmentRequests, setAppointmentRequests] = useState([]);
-    const [loadingRequests, setLoadingRequests] = useState(false);
+    // Removed pending requests; only Upcoming and Past remain
     const [searchTerm, setSearchTerm] = useState('');
     const [bloodTypeFilter, setBloodTypeFilter] = useState('All');
     const [view, setView] = useState('list'); // 'list' or 'calendar'
-    const [activeTab, setActiveTab] = useState('pending'); // 'pending', 'upcoming', or 'past'
+    const [activeTab, setActiveTab] = useState('upcoming'); // 'upcoming' or 'past'
     const [isModalOpen, setModalOpen] = useState(false);
-    const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
-    const [isDenyModalOpen, setIsDenyModalOpen] = useState(false);
     const [selectedAppointment, setSelectedAppointment] = useState(null);
-    const [selectedRequest, setSelectedRequest] = useState(null);
     const [selectedCalendarDate, setSelectedCalendarDate] = useState(new Date());
     const [currentPage, setCurrentPage] = useState(1);
-    const [approveFormData, setApproveFormData] = useState({ date: '', time: '', donationType: 'whole-blood', locationName: '', locationCity: '', hospitalResponse: '' });
     
     // --- DERIVED STATE & MEMOS ---
     const filteredAppointments = useMemo(() => {
@@ -73,6 +68,55 @@ export default function AppointmentsPage() {
     }, [appointments, searchTerm, bloodTypeFilter, activeTab]);
 
     useEffect(() => { setCurrentPage(1); }, [searchTerm, bloodTypeFilter, activeTab]);
+
+    // Load appointments from backend for hospital (upcoming/past)
+    useEffect(() => {
+        const loadAppointments = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) return;
+            try {
+                const [upRes, pastRes] = await Promise.all([
+                    fetch('/api/appointments/hospital/upcoming', { headers: { Authorization: `Bearer ${token}` } }),
+                    fetch('/api/appointments/hospital/past', { headers: { Authorization: `Bearer ${token}` } }),
+                ]);
+                const upData = upRes.ok ? await upRes.json() : { success: false, appointments: [] };
+                const pastData = pastRes.ok ? await pastRes.json() : { success: false, appointments: [] };
+
+                if (upData.success || pastData.success) {
+                    const normalized = [
+                        ...(upData.appointments || []).map(a => ({
+                            id: a._id,
+                            donorName: a.userId?.name || 'Donor',
+                            donorEmail: a.userId?.email || '',
+                            donorPhone: a.userId?.phone || '',
+                            date: a.date,
+                            time: a.time,
+                            bloodType: a.userId?.bloodGroup || '',
+                            donationType: a.donationType?.replace('-', ' ') || 'Whole Blood',
+                            status: 'Upcoming',
+                            notes: '',
+                        })),
+                        ...(pastData.appointments || []).map(a => ({
+                            id: a._id,
+                            donorName: a.userId?.name || 'Donor',
+                            donorEmail: a.userId?.email || '',
+                            donorPhone: a.userId?.phone || '',
+                            date: a.date,
+                            time: a.time,
+                            bloodType: a.userId?.bloodGroup || '',
+                            donationType: a.donationType?.replace('-', ' ') || 'Whole Blood',
+                            status: a.status === 'Scheduled' ? 'Completed' : a.status, // map non-scheduled to past
+                            notes: '',
+                        })),
+                    ];
+                    setAppointments(normalized);
+                }
+            } catch (e) {
+                console.error('Error loading appointments:', e);
+            }
+        };
+        loadAppointments();
+    }, []);
 
     const totalPages = Math.ceil(filteredAppointments.length / ITEMS_PER_PAGE);
     const paginatedAppointments = useMemo(() => {
@@ -109,95 +153,7 @@ export default function AppointmentsPage() {
     const highlightedDays = Array.from(appointmentsByDate.keys()).map(dateStr => new Date(dateStr));
     const appointmentsForSelectedDay = appointmentsByDate.get(format(selectedCalendarDate, 'yyyy-MM-dd')) || [];
     
-    // Load appointment requests from backend
-    useEffect(() => {
-        loadAppointmentRequests();
-    }, []);
-
-    const loadAppointmentRequests = async () => {
-        const token = localStorage.getItem('token');
-        if (!token) return;
-
-        try {
-            setLoadingRequests(true);
-            const res = await fetch('/api/appointment-requests/hospital/pending', {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            if (res.ok) {
-                const data = await res.json();
-                if (data.success) {
-                    setAppointmentRequests(data.requests || []);
-                }
-            }
-        } catch (e) {
-            console.error('Error loading appointment requests:', e);
-            toast.error('Failed to load appointment requests');
-        } finally {
-            setLoadingRequests(false);
-        }
-    };
-
-    const handleApproveRequest = async () => {
-        const token = localStorage.getItem('token');
-        if (!token || !selectedRequest) return;
-
-        try {
-            const res = await fetch(`/api/appointment-requests/${selectedRequest._id}/approve`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify(approveFormData),
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                toast.success('Appointment request approved!');
-                setIsApproveModalOpen(false);
-                setSelectedRequest(null);
-                setApproveFormData({ date: '', time: '', donationType: 'whole-blood', locationName: '', locationCity: '', hospitalResponse: '' });
-                loadAppointmentRequests();
-            } else {
-                toast.error(data.msg || 'Failed to approve request');
-            }
-        } catch (e) {
-            console.error('Error approving request:', e);
-            toast.error('Error approving request');
-        }
-    };
-
-    const handleDenyRequest = async () => {
-        const token = localStorage.getItem('token');
-        if (!token || !selectedRequest) return;
-
-        const response = prompt('Please provide a reason for denial (optional):');
-        
-        try {
-            const res = await fetch(`/api/appointment-requests/${selectedRequest._id}/deny`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ hospitalResponse: response || 'Request denied' }),
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                toast.success('Appointment request denied');
-                setIsDenyModalOpen(false);
-                setSelectedRequest(null);
-                loadAppointmentRequests();
-            } else {
-                toast.error(data.msg || 'Failed to deny request');
-            }
-        } catch (e) {
-            console.error('Error denying request:', e);
-            toast.error('Error denying request');
-        }
-    };
+    // Pending requests removed; approval/denial handlers and data loading removed
 
     // --- HANDLERS ---
     const handleViewDetails = (appt) => {
@@ -270,9 +226,6 @@ export default function AppointmentsPage() {
                     <div className="flex justify-between items-center border-t pt-4">
                          {/* Main Tabs */}
                         <div className="flex items-center border border-gray-200 rounded-lg p-1 bg-gray-50">
-                            <button onClick={() => setActiveTab('pending')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'pending' ? 'bg-red-600 text-white shadow' : 'text-gray-600 hover:bg-gray-200'}`}>
-                                Pending Requests {appointmentRequests.length > 0 && <span className="ml-2 bg-red-500 text-white rounded-full px-2 py-0.5 text-xs">{appointmentRequests.length}</span>}
-                            </button>
                             <button onClick={() => setActiveTab('upcoming')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'upcoming' ? 'bg-red-600 text-white shadow' : 'text-gray-600 hover:bg-gray-200'}`}>Upcoming</button>
                             <button onClick={() => setActiveTab('past')} className={`px-4 py-1.5 rounded-md text-sm font-medium ${activeTab === 'past' ? 'bg-red-600 text-white shadow' : 'text-gray-600 hover:bg-gray-200'}`}>Past</button>
                         </div>
@@ -290,61 +243,20 @@ export default function AppointmentsPage() {
 
                 {/* Main Content: Table or Calendar */}
                 {view === 'list' ? (
-                    activeTab === 'pending' ? (
-                        <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left">
-                                    <thead className="border-b bg-gray-50">
-                                        <tr className="[&>th]:p-4 [&>th]:text-sm [&>th]:font-semibold [&>th]:text-gray-600">
-                                            <th>Donor Name</th><th>Blood Type</th><th>Donation Type</th><th>Preferred Date</th><th>Preferred Time</th><th>Request Date</th><th className="text-center">Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {loadingRequests ? (
-                                            <tr>
-                                                <td colSpan="7" className="p-8 text-center">
-                                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600 mx-auto mb-2"></div>
-                                                    <p className="text-gray-500">Loading requests...</p>
-                                                </td>
-                                            </tr>
-                                        ) : appointmentRequests.length === 0 ? (
-                                            <tr>
-                                                <td colSpan="7" className="p-8 text-center text-gray-500">No pending appointment requests</td>
-                                            </tr>
-                                        ) : (
-                                            appointmentRequests.map(req => (
-                                                <tr key={req._id} className="border-b hover:bg-gray-50">
-                                                    <td className="p-4 font-medium text-gray-800">{req.donorId?.name || 'Unknown'}</td>
-                                                    <td className="p-4 font-bold text-red-600">{req.bloodType}</td>
-                                                    <td className="p-4 capitalize">{req.donationType?.replace('-', ' ') || 'Whole Blood'}</td>
-                                                    <td className="p-4">{req.preferredDate ? format(new Date(req.preferredDate), 'dd-MM-yyyy') : 'Not specified'}</td>
-                                                    <td className="p-4">{req.preferredTime || 'Not specified'}</td>
-                                                    <td className="p-4">{format(new Date(req.createdAt), 'dd-MM-yyyy')}</td>
-                                                    <td className="p-4 text-center space-x-2">
-                                                        <button onClick={() => { setSelectedRequest(req); setIsApproveModalOpen(true); }} className="p-1 text-green-600 hover:text-green-800" title="Approve"><CheckIcon /></button>
-                                                        <button onClick={() => { setSelectedRequest(req); setIsDenyModalOpen(true); }} className="p-1 text-red-600 hover:text-red-800" title="Deny"><XIcon /></button>
-                                                        <button onClick={() => handleViewDetails({ donorName: req.donorId?.name, email: req.donorId?.email, phone: req.donorId?.phone, bloodType: req.bloodType })} className="p-1 text-blue-600 hover:text-blue-800" title="View Details"><EyeIcon /></button>
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    ) : (
                      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left">
                                 <thead className="border-b bg-gray-50">
                                     <tr className="[&>th]:p-4 [&>th]:text-sm [&>th]:font-semibold [&>th]:text-gray-600">
-                                        <th>Donor Name</th><th>Date</th><th>Time</th><th>Blood Type</th><th>Donation Type</th><th>Status</th><th className="text-center">Actions</th>
+                                        <th>Donor Name</th><th>Email</th><th>Phone</th><th>Date</th><th>Time</th><th>Blood Type</th><th>Donation Type</th><th>Status</th><th className="text-center">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {paginatedAppointments.map(appt => (
                                         <tr key={appt.id} className="border-b hover:bg-gray-50">
                                             <td className="p-4 font-medium text-gray-800">{appt.donorName}</td>
+                                            <td className="p-4 text-gray-700">{appt.donorEmail || '-'}</td>
+                                            <td className="p-4 text-gray-700">{appt.donorPhone || '-'}</td>
                                             <td className="p-4">{format(new Date(appt.date), 'dd-MM-yyyy')}</td>
                                             <td className="p-4">{appt.time}</td>
                                             <td className="p-4 font-bold text-red-600">{appt.bloodType}</td>
@@ -370,7 +282,6 @@ export default function AppointmentsPage() {
                             </div>
                         </div>
                     </div>
-                    )
                 ) : (
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border p-4">
@@ -400,75 +311,7 @@ export default function AppointmentsPage() {
                 )}
             </main>
 
-            {/* Approve Request Modal */}
-            {isApproveModalOpen && selectedRequest && (
-                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl">
-                        <div className="bg-green-600 text-white p-4 rounded-t-lg">
-                            <h3 className="text-xl font-semibold">Approve Appointment Request</h3>
-                        </div>
-                        <div className="p-6 space-y-4">
-                            <div className="bg-gray-50 p-4 rounded-lg">
-                                <p className="text-sm text-gray-600 mb-2">Donor: <span className="font-semibold text-gray-800">{selectedRequest.donorId?.name}</span></p>
-                                <p className="text-sm text-gray-600 mb-2">Blood Type: <span className="font-bold text-red-600">{selectedRequest.bloodType}</span></p>
-                                <p className="text-sm text-gray-600">Preferred Date: {selectedRequest.preferredDate ? format(new Date(selectedRequest.preferredDate), 'dd-MM-yyyy') : 'Not specified'}</p>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                                    <input type="date" value={approveFormData.date} onChange={(e) => setApproveFormData({...approveFormData, date: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" required />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Time *</label>
-                                    <input type="time" value={approveFormData.time} onChange={(e) => setApproveFormData({...approveFormData, time: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" required />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Location Name *</label>
-                                    <input type="text" value={approveFormData.locationName} onChange={(e) => setApproveFormData({...approveFormData, locationName: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" placeholder="Hospital name" required />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">City *</label>
-                                    <input type="text" value={approveFormData.locationCity} onChange={(e) => setApproveFormData({...approveFormData, locationCity: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" required />
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Donation Type</label>
-                                    <select value={approveFormData.donationType} onChange={(e) => setApproveFormData({...approveFormData, donationType: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none">
-                                        <option value="whole-blood">Whole Blood</option>
-                                        <option value="platelets">Platelets</option>
-                                        <option value="power-red">Power Red</option>
-                                    </select>
-                                </div>
-                                <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Response Message (Optional)</label>
-                                    <textarea value={approveFormData.hospitalResponse} onChange={(e) => setApproveFormData({...approveFormData, hospitalResponse: e.target.value})} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-200 focus:border-red-400 outline-none" rows="3" placeholder="Optional message to donor"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="flex justify-end gap-4 p-4 bg-gray-50 rounded-b-lg border-t">
-                            <button onClick={() => { setIsApproveModalOpen(false); setSelectedRequest(null); setApproveFormData({ date: '', time: '', donationType: 'whole-blood', locationName: '', locationCity: '', hospitalResponse: '' }); }} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">Cancel</button>
-                            <button onClick={handleApproveRequest} disabled={!approveFormData.date || !approveFormData.time || !approveFormData.locationName || !approveFormData.locationCity} className="px-5 py-2 bg-green-600 text-white rounded-md text-sm font-semibold hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed">Approve</button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Deny Request Modal */}
-            {isDenyModalOpen && selectedRequest && (
-                <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-                    <div className="bg-white rounded-lg shadow-2xl w-full max-w-md">
-                        <div className="bg-red-600 text-white p-4 rounded-t-lg">
-                            <h3 className="text-xl font-semibold">Deny Appointment Request</h3>
-                        </div>
-                        <div className="p-6">
-                            <p className="text-gray-700 mb-4">Are you sure you want to deny the appointment request from <span className="font-semibold">{selectedRequest.donorId?.name}</span>?</p>
-                        </div>
-                        <div className="flex justify-end gap-4 p-4 bg-gray-50 rounded-b-lg border-t">
-                            <button onClick={() => { setIsDenyModalOpen(false); setSelectedRequest(null); }} className="px-5 py-2 bg-gray-200 text-gray-800 rounded-md text-sm font-semibold hover:bg-gray-300">Cancel</button>
-                            <button onClick={handleDenyRequest} className="px-5 py-2 bg-red-600 text-white rounded-md text-sm font-semibold hover:bg-red-700">Deny Request</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* Pending requests modals removed */}
 
             {/* View Details Modal (ENHANCED) */}
             {isModalOpen && selectedAppointment && (

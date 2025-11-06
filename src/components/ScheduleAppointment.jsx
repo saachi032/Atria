@@ -69,6 +69,9 @@ export default function ScheduleAppointment() {
     const hospitalName = searchParams.get('hospitalName');
     const location = searchParams.get('location');
     const bloodType = searchParams.get('bloodType');
+    // Capture organization context from query params
+    const orgType = searchParams.get('orgType');
+    const orgId = searchParams.get('orgId') || searchParams.get('hospitalId');
 
     if (location) {
       setFormData(prev => ({
@@ -165,6 +168,9 @@ export default function ScheduleAppointment() {
           donationType: formData.donationType,
           date: formData.date,
           time: formData.time,
+          // Pass through organization linkage for hospital/blood bank dashboards
+          hospitalId: (searchParams.get('orgType') === 'hospital' ? (searchParams.get('orgId') || searchParams.get('hospitalId')) : ''),
+          bloodBankId: (searchParams.get('orgType') === 'bloodbank' ? (searchParams.get('orgId') || '') : ''),
         })
       });
       const data = await res.json();

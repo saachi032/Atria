@@ -208,6 +208,9 @@ export default function Notifications() {
   const [requestDetails, setRequestDetails] = useState(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
+  const [selectedOrganization, setSelectedOrganization] = useState('');
+  const [organizationDetails, setOrganizationDetails] = useState(null);
+  const [loadingOrgDetails, setLoadingOrgDetails] = useState(false);
 
   useEffect(() => {
     loadNotifications();
@@ -281,13 +284,21 @@ export default function Notifications() {
   };
 
   const scheduleDonation = (notification) => {
-    // Build location string from hospital/blood bank name
-    const hospitalName = notification.hospitalName || notification.bloodBankName || '';
-    
-    // Redirect to schedule appointment page with notification data in query params
+    // Build org context
+    const isHospital = !!notification.hospitalId;
+    const orgId = notification.hospitalId || notification.bloodBankId || '';
+    const orgType = isHospital ? 'hospital' : 'bloodbank';
+    const orgName = notification.hospitalName || notification.bloodBankName || '';
+
+    // Redirect to schedule appointment page with notification and org data
     const params = new URLSearchParams({
-      hospitalName: hospitalName,
-      hospitalId: notification.hospitalId || notification.bloodBankId || '',
+      // Back-compat fields
+      hospitalName: orgName,
+      hospitalId: orgId,
+      // New explicit fields
+      orgType,
+      orgId,
+      orgName,
       bloodType: notification.bloodType || '',
       notificationId: notification._id || '',
       message: notification.message || '',
@@ -350,8 +361,103 @@ export default function Notifications() {
     }
   };
 
+  // Extract unique organizations from notifications
+  const getUniqueOrganizations = () => {
+    const orgs = new Map();
+    
+    notifications.forEach(notification => {
+      if (notification.hospitalId && notification.hospitalName) {
+        const hospitalId = String(notification.hospitalId);
+        const key = `hospital-${hospitalId}`;
+        if (!orgs.has(key)) {
+          orgs.set(key, {
+            id: hospitalId,
+            name: notification.hospitalName,
+            type: 'hospital',
+            displayName: `${notification.hospitalName} (Hospital)`
+          });
+        }
+      }
+      if (notification.bloodBankId && notification.bloodBankName) {
+        const bloodBankId = String(notification.bloodBankId);
+        const key = `bloodbank-${bloodBankId}`;
+        if (!orgs.has(key)) {
+          orgs.set(key, {
+            id: bloodBankId,
+            name: notification.bloodBankName,
+            type: 'bloodbank',
+            displayName: `${notification.bloodBankName} (Blood Bank)`
+          });
+        }
+      }
+    });
+    
+    return Array.from(orgs.values());
+  };
+
+  const fetchOrganizationDetails = async (orgId, orgType) => {
+    if (!orgId || !orgType) {
+      setOrganizationDetails(null);
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    setLoadingOrgDetails(true);
+    try {
+      const res = await fetch(`/api/notifications/organization/${orgId}/${orgType}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setOrganizationDetails(data.organization);
+      } else {
+        setOrganizationDetails(null);
+        console.error('Failed to load organization details');
+      }
+    } catch (e) {
+      console.error('Error loading organization details:', e);
+      setOrganizationDetails(null);
+    } finally {
+      setLoadingOrgDetails(false);
+    }
+  };
+
+  const handleOrganizationChange = (e) => {
+    const value = e.target.value;
+    setSelectedOrganization(value);
+    
+    if (value === '') {
+      setOrganizationDetails(null);
+    } else {
+      const [orgType, orgId] = value.split('-');
+      fetchOrganizationDetails(orgId, orgType);
+    }
+  };
+
+  // Filter notifications by selected organization
+  const getFilteredNotifications = () => {
+    if (!selectedOrganization) {
+      return notifications;
+    }
+    
+    const [orgType, orgId] = selectedOrganization.split('-');
+    return notifications.filter(notification => {
+      if (orgType === 'hospital') {
+        return String(notification.hospitalId) === String(orgId);
+      } else if (orgType === 'bloodbank') {
+        return String(notification.bloodBankId) === String(orgId);
+      }
+      return true;
+    });
+  };
+
   const urgencyOptions = ['All', 'Critical', 'High', 'Medium', 'Low'];
   const unreadCount = notifications.filter(n => !n.isRead).length;
+  const uniqueOrganizations = getUniqueOrganizations();
+  const filteredNotifications = getFilteredNotifications();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50/30 to-gray-50 pt-28 pb-16">
@@ -371,27 +477,192 @@ export default function Notifications() {
           </p>
         </div>
 
-        {/* Filter */}
-        <div className="bg-white rounded-xl shadow-lg p-4 mb-6 border border-gray-100">
-          <div className="flex flex-wrap items-center gap-3">
-            <span className="text-sm font-semibold text-gray-700">Filter by Urgency:</span>
-            {urgencyOptions.map((urgency) => (
-              <button
-                key={urgency}
-                onClick={() => {
-                  setSelectedUrgency(urgency);
-                  setLoading(true);
-                }}
-                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                  selectedUrgency === urgency
-                    ? 'bg-red-600 text-white shadow-md'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {urgency}
-              </button>
-            ))}
+        {/* Filters */}
+        <div className="space-y-4 mb-6">
+          {/* Urgency Filter */}
+          <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-semibold text-gray-700">Filter by Urgency:</span>
+              {urgencyOptions.map((urgency) => (
+                <button
+                  key={urgency}
+                  onClick={() => {
+                    setSelectedUrgency(urgency);
+                    setLoading(true);
+                  }}
+                  className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                    selectedUrgency === urgency
+                      ? 'bg-red-600 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {urgency}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Organization Filter Dropdown */}
+          {uniqueOrganizations.length > 0 && (
+            <div className="bg-white rounded-xl shadow-lg p-4 border border-gray-100">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                <label htmlFor="organization-select" className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                  Filter by Organization:
+                </label>
+                <select
+                  id="organization-select"
+                  value={selectedOrganization}
+                  onChange={handleOrganizationChange}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none text-sm font-medium"
+                >
+                  <option value="">All Organizations</option>
+                  {uniqueOrganizations.map((org) => (
+                    <option key={`${org.type}-${org.id}`} value={`${org.type}-${org.id}`}>
+                      {org.displayName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Organization Details Card */}
+          {selectedOrganization && organizationDetails && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-lg p-6 border-l-4 border-blue-600">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-bold text-gray-800">
+                  {organizationDetails.type} Information
+                </h3>
+                <button
+                  onClick={() => {
+                    setSelectedOrganization('');
+                    setOrganizationDetails(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              
+              {loadingOrgDetails ? (
+                <div className="flex items-center justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-2 text-gray-600">Loading details...</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Organization Name</span>
+                    <div className="mt-1 text-lg font-semibold text-blue-700">{organizationDetails.name}</div>
+                  </div>
+                  
+                  {organizationDetails.address && (
+                    <div className="col-span-2">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Address</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.address}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.city && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">City</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.city}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.state && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">State</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.state}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.district && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">District</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.district}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.pincode && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Pincode</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.pincode}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.contactNumber && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Contact Number</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.contactNumber}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.email && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Email</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.email}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.pocName && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Point of Contact</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.pocName}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.pocDesignation && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">POC Designation</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.pocDesignation}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.pocMobile && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">POC Mobile</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.pocMobile}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.pocEmail && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">POC Email</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.pocEmail}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.hospitalType && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Hospital Type</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.hospitalType}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.licenseNumber && (
+                    <div>
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">License Number</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">{organizationDetails.licenseNumber}</div>
+                    </div>
+                  )}
+                  
+                  {organizationDetails.website && (
+                    <div className="col-span-2">
+                      <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">Website</span>
+                      <div className="mt-1 text-sm font-semibold text-gray-800">
+                        <a href={organizationDetails.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                          {organizationDetails.website}
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Error Message */}
@@ -423,7 +694,7 @@ export default function Notifications() {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {notifications.map((notification) => {
+              {filteredNotifications.map((notification) => {
                 const requestId = notification.requestId?._id || notification.requestId;
                 const isRequest = !!requestId;
                 const isAlert = !requestId;
