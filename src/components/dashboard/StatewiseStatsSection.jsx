@@ -13,7 +13,7 @@ export default function StatewiseStatsSection() {
     const fetchStatewiseData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("/api/insights/statewise");
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/insights/statewise`);
         setStatewiseBars(response.data.statewiseBars);
         setStatewiseTableData(response.data.statewiseTableData);
         setError(null);

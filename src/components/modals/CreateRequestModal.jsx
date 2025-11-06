@@ -26,7 +26,7 @@ export default function CreateRequestModal({ isOpen, onClose }) {
     e.preventDefault()
     try {
       const token = localStorage.getItem('token') || ''
-      const res = await fetch('/api/requests', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/requests`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -26,7 +26,7 @@ export default function RecordDonationModal({ isOpen, onClose }) {
     e.preventDefault()
     try {
       const token = localStorage.getItem('token') || ''
-      const res = await fetch('/api/donations', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/donations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

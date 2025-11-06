@@ -291,7 +291,7 @@ export default function HospitalDashboard() {
     if (!token) return
     const load = async () => {
       try {
-        const res = await fetch('/api/appointments/hospital/upcoming', { headers: { Authorization: `Bearer ${token}` } })
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/hospital/upcoming`, { headers: { Authorization: `Bearer ${token}` } })
         if (!res.ok) return
         const data = await res.json()
         if (data && data.success && Array.isArray(data.appointments)) {

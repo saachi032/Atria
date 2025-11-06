@@ -229,8 +229,8 @@ export default function Notifications() {
       setError('');
       
       const url = selectedUrgency === 'All' 
-        ? '/api/notifications'
-        : `/api/notifications?urgency=${selectedUrgency}`;
+        ? `${import.meta.env.VITE_BACKEND_URL}/api/notifications`
+        : `${import.meta.env.VITE_BACKEND_URL}/api/notifications?urgency=${selectedUrgency}`;
       
       const res = await fetch(url, {
         headers: { Authorization: `Bearer ${token}` },
@@ -268,7 +268,7 @@ export default function Notifications() {
     if (!token) return;
 
     try {
-      const res = await fetch(`/api/notifications/${notificationId}/read`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/notifications/${notificationId}/read`, {
         method: 'PATCH',
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -406,7 +406,7 @@ export default function Notifications() {
 
     setLoadingOrgDetails(true);
     try {
-      const res = await fetch(`/api/notifications/organization/${orgId}/${orgType}`, {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/notifications/organization/${orgId}/${orgType}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

@@ -23,7 +23,7 @@ export default function SendDonorAlertModal({ isOpen, onClose }) {
     e.preventDefault()
     try {
       const token = localStorage.getItem('token') || ''
-      const res = await fetch('/api/alerts', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/alerts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

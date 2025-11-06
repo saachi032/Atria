@@ -275,7 +275,7 @@ export default function BloodBankDashboard() {
     if (!token) return
     const load = async () => {
       try {
-        const res = await fetch('/api/appointments/bloodbank/upcoming', { headers: { Authorization: `Bearer ${token}` } })
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/bloodbank/upcoming`, { headers: { Authorization: `Bearer ${token}` } })
         if (!res.ok) return
         const data = await res.json()
         if (data && data.success && Array.isArray(data.appointments)) setScheduledCount(data.appointments.length)

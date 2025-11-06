@@ -11,7 +11,7 @@ export default function TodaysStatsSection() {
     const fetchTodaysStatsData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("/api/insights/todays-stats");
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/insights/todays-stats`);
         setTodaysStatsData(response.data.todaysStatsData);
         setError(null);
       } catch (err) {

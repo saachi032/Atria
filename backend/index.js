@@ -24,6 +24,9 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+app.get('/', (req, res) => {
+  res.send('Welcome to the Blood Donation Management System API');
+});
 app.use('/api/auth', authRoutes);
 app.use('/api/hospital', hospitalAuthRoutes);
 app.use('/api/bloodbank', bloodBankAuthRoutes);

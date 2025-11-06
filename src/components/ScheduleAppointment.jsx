@@ -159,7 +159,7 @@ export default function ScheduleAppointment() {
     if (!token) { setError('You must be logged in.'); return; }
 
     try {
-      const res = await fetch('/api/appointments', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({

@@ -105,7 +105,7 @@ const Navbar = () => {
         if (!token) return;
 
         try {
-          const res = await fetch('/api/notifications/unread-count', {
+          const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/notifications/unread-count`, {
             headers: { Authorization: `Bearer ${token}` },
           });
           if (res.ok) {

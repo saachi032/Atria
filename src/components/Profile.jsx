@@ -54,7 +54,7 @@ export default function Profile() {
     }
     const load = async () => {
       try {
-        const res = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
         if (!data.success) {
           setError(data.msg || 'Failed to load profile');
@@ -94,7 +94,7 @@ export default function Profile() {
     const token = localStorage.getItem('token');
     if (!token) { setError('Not authenticated'); setSaving(false); return; }
     try {
-      const res = await fetch('/api/auth/me', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -146,7 +146,7 @@ export default function Profile() {
     const token = localStorage.getItem('token');
     if (!token) { setError('Not authenticated'); setQrLoading(false); return; }
     try {
-      const res = await fetch('/api/auth/qr', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/qr`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (!data.success) {
         setError(data.msg || 'Failed to generate QR');

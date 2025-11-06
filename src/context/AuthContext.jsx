@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     setError(null);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }) => {
   const hospitalLogin = async (email, password) => {
     setError(null);
     try {
-      const res = await fetch('/api/hospital/login', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/hospital/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -90,7 +90,7 @@ export const AuthProvider = ({ children }) => {
   const bloodBankLogin = async (email, password) => {
     setError(null);
     try {
-      const res = await fetch('/api/bloodbank/login', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/bloodbank/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })

@@ -102,7 +102,7 @@ export default function DonationHistory() {
     }
     const load = async () => {
       try {
-        const res = await fetch('/api/appointments/upcoming', {
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/upcoming`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (!res.ok) {

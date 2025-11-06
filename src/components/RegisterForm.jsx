@@ -77,7 +77,7 @@ export default function RegisterForm() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/otp/send', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: form.phone })
@@ -108,7 +108,7 @@ export default function RegisterForm() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/otp/verify', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: form.phone, otp })
@@ -152,7 +152,7 @@ export default function RegisterForm() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

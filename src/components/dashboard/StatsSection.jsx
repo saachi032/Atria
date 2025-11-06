@@ -11,7 +11,7 @@ export default function StatsSection() {
     const fetchStatsData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("/api/insights/stats");
+        const response = await axios.get(`${import.meta.env.VITE_BACKEND_URL}/api/insights/stats`);
         setStatsData(response.data.statsData);
         setError(null);
       } catch (err) {

@@ -10,7 +10,7 @@ export default function DonorHealthCard() {
   useEffect(() => {
     const loadDonorData = async () => {
       try {
-        const res = await fetch(`/api/auth/donor/${donorId}`);
+        const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/auth/donor/${donorId}`);
         const data = await res.json();
         if (!data.success) {
           setError(data.msg || 'Failed to load donor information');

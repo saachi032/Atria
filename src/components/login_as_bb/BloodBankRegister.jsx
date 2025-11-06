@@ -77,7 +77,7 @@ export default function BloodBankRegister() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/otp/send', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/otp/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: form.pocMobile })
@@ -108,7 +108,7 @@ export default function BloodBankRegister() {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/otp/verify', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/otp/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phoneNumber: form.pocMobile, otp })
@@ -146,7 +146,7 @@ export default function BloodBankRegister() {
     if (!hasSpecialChar.test(form.password)) { setError("Password must contain at least one special character."); return; }
     setLoading(true);
     try {
-      const res = await fetch('/api/bloodbank/register', {
+      const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/bloodbank/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -76,8 +76,8 @@ export default function AppointmentsPage() {
             if (!token) return;
             try {
                 const [upRes, pastRes] = await Promise.all([
-                    fetch('/api/appointments/hospital/upcoming', { headers: { Authorization: `Bearer ${token}` } }),
-                    fetch('/api/appointments/hospital/past', { headers: { Authorization: `Bearer ${token}` } }),
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/hospital/upcoming`, { headers: { Authorization: `Bearer ${token}` } }),
+                    fetch(`${import.meta.env.VITE_BACKEND_URL}/api/appointments/hospital/past`, { headers: { Authorization: `Bearer ${token}` } }),
                 ]);
                 const upData = upRes.ok ? await upRes.json() : { success: false, appointments: [] };
                 const pastData = pastRes.ok ? await pastRes.json() : { success: false, appointments: [] };
